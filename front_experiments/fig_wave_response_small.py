@@ -50,7 +50,7 @@ def main():
     pulse_profile[1] *= 0
 
     asymptotic = response(epsilon, **params.dict, theta=theta)
-    speed = get_speed(**params.dict, theta=theta)
+    speed = get_speed(mu=params.mu, alpha=params.alpha, gamma=params.gamma, theta=theta)
 
     solver = TqdmWrapper(EulerDelta(delta_time, epsilon*pulse_profile))
 

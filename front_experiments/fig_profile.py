@@ -38,7 +38,7 @@ def main():
              **threshold_style,
              label='$\\theta$')
     plt.legend()
-    plt.title('Traveling Pulse Profile')
+    plt.title('Traveling Front Profile')
     plt.xlabel('$\\xi$')
     plt.tight_layout()
 

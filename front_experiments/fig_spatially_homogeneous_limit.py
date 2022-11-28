@@ -11,12 +11,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os.path
 from tqdm import tqdm
-from adaptive_front import U_numeric, Q_numeric, get_speed, response
+from adaptive_front import U_numeric, Q_numeric, get_speed, response_beta
 from neural_field import (NeuralField,
-                          ParametersBeta,
+                          Parameters,
                           heaviside_firing_rate,
                           exponential_weight_kernel)
-from space_domain import SpaceDomain
+from space_domain import BufferedSpaceDomain
 from time_domain import TimeDomain_Start_Stop_MaxSpacing
 from time_integrator import EulerDelta
 from time_integrator_tqdm import TqdmWrapper
@@ -28,10 +28,10 @@ def main():
 
     file_name = 'fig_spatially_homogeneous_limit'
 
-    params = ParametersBeta(mu=1.0, alpha=20.0, beta=0.2)
+    params = Parameters(mu=1.0, alpha=20.0, gamma=0.2)
     theta = 0.1
-    space = SpaceDomain(-100, 200, 10**4)
-    time = TimeDomain_Start_Stop_MaxSpacing(0, 18, 1e-3/5)
+    space = BufferedSpaceDomain(-100, 200, 10**4, .2)
+    time = TimeDomain_Start_Stop_MaxSpacing(0, 30, 1e-3/5)
     initial_offset = 0
     u0 = np.empty((2, space.num_points))
     u0[0] = U_numeric(space.array+initial_offset, theta=theta, **params.dict)
@@ -46,21 +46,22 @@ def main():
     pulse_profile = np.ones_like(u0)
     pulse_profile[1] *= 0
 
-    speed = get_speed(theta=theta, **params.dict)
+    speed = get_speed(mu=params.mu,
+                      alpha=params.alpha,
+                      gamma=params.gamma,
+                      theta=theta)
     base_response = speed * time.array[-1] - initial_offset
 
-    response_slope = response(1, **params.dict, theta=theta)
+    response_slope = response_beta(1, **params.dict, theta=theta)
 
-    epsilons = np.linspace(-0.09, 0.09, 11)
+    epsilons = np.linspace(-0.08, 0.08, 21)
     responses = []
-
-    x_root_index_start = 200
 
     for eps_index, epsilon in enumerate(epsilons):
         print(f'{eps_index+1}/{len(epsilons)}')
         solver = TqdmWrapper(EulerDelta(delta_time, epsilon*pulse_profile))
         u, q = solver.t_final(u0, model.rhs, time)
-        front = find_roots(space.array[x_root_index_start:], u[x_root_index_start:]-theta, window=7)[-1]
+        front = find_roots(space.inner, u[space.inner_slice]-theta, window=3)
         responses.append(front - base_response)
 
     plt.figure(figsize=(7, 4))

@@ -67,7 +67,7 @@ class NeuralField:
         temp = self.firing_rate(u)
         v_new = np.empty_like(v)
         v_new[0] = 1/self.params.mu * (-u + self.conv(q*temp))
-        v_new[1] = (1-q)/self.params.alpha - self.params.beta*q*temp
+        v_new[1] = (1 - q)/self.params.alpha - self.params.beta*q*temp
         return v_new
 
 
