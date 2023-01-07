@@ -89,11 +89,11 @@ class NeuralFieldMatrixConvolv(NeuralField):
 def heaviside_firing_rate(y: np.ndarray, theta: float) -> np.ndarray:
     return np.heaviside(y-theta, .5)
 
-# sample weight kernel functions
+# weight kernel functions
 
 def exponential_weight_kernel(y: np.ndarray) -> np.ndarray:
     return .5*np.exp(-np.abs(y))
 
-# traveling front profiles
-
-
+def wizzard_hat(y: np.ndarray) -> np.ndarray:
+    yabs = np.abs(y)
+    return (1 - yabs)*np.exp(-yabs)
