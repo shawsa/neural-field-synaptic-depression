@@ -1,3 +1,32 @@
+"""Numerics for pulses.
+
+Specifically, we assume a Heaviside firing-rate function to make some
+analytical simplifications, and can then use numerical techniques to
+approximate the traveling pulse solutions and null-spaces given a weight kernel
+and parameters.
+
+Given an estimate for the pulse width (Delta) and pulse speed (c), we assume
+that the fore-threshold crossing occurs at coordinate x = 0. We then use a
+variation of the shooting method to determine the pulse width and speed, and
+in general the profiles of the activity (U) and synaptic efficacy (Q) variables
+for the traveling pulse solution.
+
+The speed and width are determined via successive binary search using
+specified intervals for each. For a given value of pulse width and a
+pair of values for the speed, we propagate the activity variable forward.
+We expect U -> +/- oo for each of the speeds, while the true value would give
+U -> 0. We use this to perform a binary search on the pulse speed.
+
+Given this method for finding a consistent speed for a given pulse width,
+we propagate the activity variable backwards and expect U(-Delta) = theta.
+We determine the true value of Delta using a binary search that enforces this
+condition.
+
+The null-space calculations have not yet been implemented, but preliminary
+work suggests this can be expressed analytically as the function of two 
+quadratures dependent on the pulse profile.
+"""
+
 import numpy as np
 
 from functools import partial
@@ -6,14 +35,29 @@ from scipy.interpolate import BarycentricInterpolator
 from scipy.optimize import root
 from scipy.signal import fftconvolve
 
+
 def Q_mid(x, alpha, gamma, c, **_):
+    """The analytic formula for the synaptic efficacy in the
+    active region.
+    """
     return gamma + (1-gamma)*np.exp(x/(c*alpha*gamma))
 
+
 def Q_left(x, alpha, gamma, c, Delta, **_):
+    """The analytic formula for the synaptic efficacy to the
+    left of the active region.
+    """
     QmDelta = Q_mid(-Delta, alpha, gamma, c)
     return 1 + (QmDelta-1)*np.exp((x+Delta)/(c*alpha))
 
+
+""" Note that to the right of the active region, the synaptic
+efficacy has a constant value of 1.
+"""
+
+
 def Q_profile(xs: np.ndarray, alpha, gamma, c, Delta, **_):
+    """The profile of the synaptic efficacy variable."""
     Qs = np.ones_like(xs)
     left_mask = xs < -Delta
     mid_mask = np.logical_and(xs < 0, ~left_mask)
@@ -22,6 +66,11 @@ def Q_profile(xs: np.ndarray, alpha, gamma, c, Delta, **_):
     return Qs
 
 class Domain:
+    """A helper class to represent the spatial domain of the
+    neural feild model. It's primary purpose is to avoid
+    code duplication for the several shooting-method-like 
+    functions, and to compute quadratures.
+    """
     def __init__(self, x0: float, xf: float, n: int):
         assert x0 < xf
         assert n > 1
@@ -42,9 +91,14 @@ class Domain:
         return len(self.array)
 
 def forcing_U(x, U, zs: Domain, weight_kernel, c, Delta, alpha, gamma, mu, **_):
+    """The spatial derivative of the activity variable for the traveling pulse
+    solution. We use the name `forcing` because we interpret the profile as the
+    solution to the ODE with this as a forcing function.
+    """
     return (U-zs.quad(weight_kernel(x-zs.array)*Q_mid(zs.array, alpha, gamma, c)))/c/mu
 
 def shoot_forward(xs: Domain, U0, forcing):
+    """Use forward Euler to solve an IVP on the given domain."""
     us = [U0]
     for x in xs.array[:-1]:
         us.append(us[-1] + xs.h*forcing(x, us[-1]))
@@ -83,12 +137,25 @@ def bin_search(a, b, func, tol=1e-10, format_str=None):
     return c
 
 def find_c(c_min, c_max, xs_right: Domain, alpha, gamma, mu, Delta, theta, weight_kernel, verbose=False, tol=1e-10, **_):
+    """Use binary search to find the wave speed consistent with this pulse
+    width. Note, due to the exponential growth of the activity variable,
+    we do not expect the activity to approach zero, rather we try to force
+    it to be close to zero for as long as possible and only accept this part
+    of the pulse to be an accurate approximation.
+    """
     format_str = 'c in (%f, %f)' if verbose else None
     def func(c):
         return U_shoot_forward(xs_right, alpha, gamma, mu, c, Delta, theta, weight_kernel)[-1]
     return bin_search(c_min, c_max, func, format_str=format_str, tol=tol)
 
 def shoot_backward(xs: Domain, U0, forcing):
+    """Use forward Euler to solve a final value problem on the given domain.
+    The naming can be a bit confusing here. Given an *ending point* rather than
+    a starting point, we can do a change of variables -t = tau, and perform
+    forward Euler on tau -> tau_0 = -t_0. This is not to be confused with
+    backward Euler which solve the same problem as forward Euler, but with
+    different stability criteria.
+    """
     us = [U0]
     for x in xs.array[::-1][:-1]:
         us.append(us[-1] - xs.h*forcing(x, us[-1]))
@@ -107,17 +174,20 @@ def U_shoot_backward(xs_left: Domain, alpha, gamma, mu, c, Delta, theta, weight_
                          mu=mu)
     return shoot_backward(xs_left, theta, my_forcing)
 
-def get_stencil(x0, xs, width=5):
+def get_stencil(x0, xs: np.ndarray, width=5):
+    """Find the <width> closest points in the array xs to the point x0."""
     index = np.argmin(np.abs(x0 - xs))
     min_index = max(index-width//2, 0)
     return slice(min_index, min_index+width)
 
 def local_interp(z, xs, ys):
+    """Use local polynomial interpolation to approximate y(z)."""
     stencil = get_stencil(z, xs)
     poly = BarycentricInterpolator(xs[stencil], ys[stencil])
     return float(poly(z))
 
 def local_diff(z, xs, ys, width=5):
+    """Use local polynomial interpolation to approximate y'(z)."""
     stencil = get_stencil(z, xs, width=width)
     poly = Polynomial.fit(xs[stencil], ys[stencil], deg=width-1).deriv()
     return float(poly(z))
@@ -134,9 +204,16 @@ def find_delta(Delta_min, Delta_max,
                verbose=False,
                tol=1e-5,
                **_):
+    """Use a binary search to find the pulse width. We enforce 
+    U(-Delta) = theta.
 
+    Note, each evaluation of Delta performs a binary search
+    to find the consistent wave speed c.
+    """
     format_str = 'Delta in (%f, %f)' if verbose else None
+
     def func(Delta):
+        """The function to root-find."""
         c = find_c(c_min, c_max, xs_right, alpha, gamma, mu, Delta, theta, weight_kernel)
         U_left = U_shoot_backward(xs_left,
                                   alpha=alpha,
@@ -153,6 +230,14 @@ def find_delta(Delta_min, Delta_max,
 def pulse_profile(xs_right: Domain,
                   xs_left: Domain,
                   *, c, Delta, alpha, gamma, mu, theta, weight_kernel, **_):
+    """Approximate the profile of the activity (U) and synaptic 
+    efficacy (Q) variables on the domain. This should only be used
+    after correct values of the pulse width (Delta) and pulse speed
+    (c) are known (to sufficient accuracy).
+
+    The numerical profile is used for plotting, approximating derivatives,
+    and approximating quadratures.
+    """
 
     xs = np.hstack((xs_left.array[:-1], xs_right.array))
     Us_right = U_shoot_forward(xs_right, c=c, Delta=Delta,
@@ -175,9 +260,13 @@ def pulse_profile(xs_right: Domain,
 
 
 def v1(xs, A0, AmD, *, mu, c, Delta, **_):
+    """The first function of the adjoint null-space pair,
+    up to two unknown constants A0, and AmD (A_{-Delta}).
+    """
     return np.exp(-xs/(c*mu))*(
             AmD*np.heaviside(xs+Delta, 0) +
             A0*np.heaviside(xs, 0))
+
 
 def make_wv1(*, 
              zs: np.ndarray,
@@ -188,6 +277,11 @@ def make_wv1(*,
              Delta,
              weight_kernel,
              **_):
+    """Create a function to approximate the weight kernel convolved
+    with v1 (see above). This is done efficiently using fft to
+    convolve array samples of each function along the domain, then
+    local interpolation to evaluate arbitrary locations.
+    """
     v1_arr = v1(zs, A0, AmD, mu=mu, c=c, Delta=Delta)
     ys = fftconvolve(weight_kernel(zs), v1_arr, mode='same')
     my_slice = slice(10, -10)
@@ -245,6 +339,18 @@ def v2_shoot_backward(xs_left: Domain, *,
 #     AmD_root = -AmD + 1/c/mu * (QmD/abs(dUmD)*wv1(-Delta) - alpha*beta*v2[0])
 # 
 #     return A0_root, AmD_root
+
+#############################################
+# 
+# To do
+#
+#############################################
+# verify the analytic calculation of the nullspace.
+# Implement here.
+# Comare to theory plots.
+# See if you can derive the result analytically using this defered evaluation
+# approach.
+
 
 def nullspace_amplitudes(
         dU0, Q0, dUmD, QmD,

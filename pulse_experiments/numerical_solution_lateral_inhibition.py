@@ -1,4 +1,13 @@
-# Numerical solution to traveling wave soltuion.
+"""Numerical solution to traveling wave soltuion.
+
+Here, we numerically compute the traveling wave solution for the neural field
+model incorporating synaptic depression. In particular, we use the Heaviside
+firing rate function, and use the wizzard-hat weight kernel.
+
+Numerical details are in `num_assist.py`, but essentially use nested binary
+searches and a variation on the shooting method to determine the wave speed c,
+the pulse width Delta, and ultimately the traveling pulse profile.
+"""
 
 import matplotlib.pyplot as plt 
 import numpy as np

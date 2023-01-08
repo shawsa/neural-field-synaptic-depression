@@ -1,9 +1,18 @@
-# Numerical solution to traveling wave soltuion.
+"""Numerical solution to traveling wave soltuion.
+
+Here, we numerically compute the traveling wave solution for the neural field
+model incorporating synaptic depression. In particular, we use the
+bi-exponential weight kernel, and the Heaviside firing rate function.
+
+Numerical details are in `num_assist.py`, but essentially use nested binary
+searches and a variation on the shooting method to determine the wave speed c,
+the pulse width Delta, and ultimately the traveling pulse profile.
+"""
 
 import matplotlib.pyplot as plt 
 import numpy as np
 
-from num_assist import *
+from num_assist import Domain, find_delta, find_c, U_shoot_forward, U_shoot_backward
 
 def weight_kernel(x):
     return .5*np.exp(-np.abs(x))
