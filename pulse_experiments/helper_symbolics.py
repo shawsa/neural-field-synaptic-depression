@@ -135,7 +135,7 @@ def get_numerical_parameters(input_params, precision=15, validate=True):
             [[condition.coeff(v) for v in my_vars]
              for condition in numerical_conditions])
 
-    eigen_vals, eigen_vect_mat = la.eig(np.array(M, dtype=np.float))
+    eigen_vals, eigen_vect_mat = la.eig(np.array(M, dtype=float))
     # find closest to 0
     eigen_val, eigen_vect = sorted(zip(eigen_vals, eigen_vect_mat.T),
                                    key=lambda tup: abs(tup[0]))[0]
@@ -168,3 +168,14 @@ def get_adjoint_nullspace(input_params, precision=15, validate=True):
     v1 = sym.lambdify(xi, recursive_reduce(expr_dict['v1']).evalf(precision, subs=params), modules=sympy_modules)
     v2 = sym.lambdify(xi, recursive_reduce(expr_dict['v2']).evalf(precision, subs=params), modules=sympy_modules)
     return v1, v2
+
+if __name__ == '__main__':
+    params = {
+            r'\mu':    1.0,
+            r'\alpha': 20.0,
+            r'\beta':  0.25,
+            r'theta':  0.2
+    }
+    params = get_numerical_parameters(params)
+    for key, val in params.items():
+        print(f'{str(key):>12}: {val}')
