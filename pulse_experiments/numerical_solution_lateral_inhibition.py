@@ -9,11 +9,10 @@ searches and a variation on the shooting method to determine the wave speed c,
 the pulse width Delta, and ultimately the traveling pulse profile.
 """
 
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 import numpy as np
 
 from scipy.interpolate import BarycentricInterpolator
-from tqdm import tqdm
 
 params = {
     'theta': 0.2,
@@ -28,6 +27,15 @@ def weight_kernel(x):
     abs_x = np.abs(x)
     return (1-.5*abs_x)*np.exp(-abs_x)
 
+def quad(xs: np.ndarray, ys: np.ndarray) -> float:
+    assert xs.shape == ys.shape
+    spacing = (xs[-1] - xs[0])/(len(xs)-1)
+    weights = np.ones_like(xs)
+    weights[0] = .5
+    weights[-1] = .5
+    return (ys @ weights) * spacing
+
+
 def Q_mid(x, alpha, gamma, c, **params):
     return gamma + (1-gamma)*np.exp(x/(c*alpha*gamma))
 
@@ -40,13 +48,8 @@ def shoot_forward(Delta, c):
     xs = np.linspace(-200, 200, N)
     h = (xs[-1] - xs[0])/(N-1)
     zs = np.linspace(-Delta, 0, 201)
-    trap_weights = np.ones_like(zs)
-    trap_weights[0] = .5
-    trap_weights[-1] = .5
-    trap_spacing = Delta/(len(zs)-1)
-
-    quad = lambda ys: (ys @ trap_weights)*trap_spacing
-    forcing = lambda x, U: (U-quad(weight_kernel(x-zs)*Q_mid(zs, c=c, **params)))/c/params['mu']
+    my_Q = Q_mid(zs, c=c, **params)
+    forcing = lambda x, U: (U-quad(zs, weight_kernel(x-zs) * my_Q))/(c*params['mu'])
 
     xs_right = xs[N//2:]
     U_right = [params['theta']]
@@ -78,13 +81,8 @@ def shoot_backward(Delta, c):
     xs = np.linspace(-200, 200, N)
     h = (xs[-1] - xs[0])/(N-1)
     zs = np.linspace(-Delta, 0, 201)
-    trap_weights = np.ones_like(zs)
-    trap_weights[0] = .5
-    trap_weights[-1] = .5
-    trap_spacing = Delta/(len(zs)-1)
-
-    quad = lambda ys: (ys @ trap_weights)*trap_spacing
-    forcing = lambda x, U: (U-quad(weight_kernel(x-zs)*Q_mid(zs, c=c, **params)))/c/params['mu']
+    my_Q = Q_mid(zs, c=c, **params)
+    forcing = lambda x, U: (U-quad(zs, weight_kernel(x-zs) * my_Q))/(c*params['mu'])
     xs_left = xs[: N//2+1]
     U_left = [params['theta']]
 
@@ -142,9 +140,19 @@ def find_delta(Delta_interval=(5, 40), c_interval=(0.1, 10)):
         Delta_min, Delta_max = improve_interval(Delta_min, Delta_max)
     return (Delta_min + Delta_max)/2
 
+def nullspace_amp(Us, Qs, c, Delta, alpha, mu, **params):
+    zs = np.linspace(-Delta, 100, 4001)
+    gmD = quad(zs, weight_kernel(zs)*np.exp(-zs/(c*mu)))
+    zs = np.linspace(0, 100, 4001)
+    g0 = quad(zs, weight_kernel(zs)*np.exp(-zs/(c*mu)))
+
+    dU = 
+
+    return gmD, g0
+
 
 Delta_interval = (5, 10)
-c_interval = c_interval=(.1, 4)
+c_interval = (.1, 4)
 Delta = find_delta(Delta_interval, c_interval)
 c = find_c(Delta, c_interval=c_interval, tol=1e-10)
 
@@ -152,6 +160,7 @@ xs, Us, Qs = generate_profile(Delta, c)
 plt.plot(xs, Us, 'b-')
 plt.plot(xs, Qs, 'b--')
 plt.ylim(-.1, 1.1)
+plt.xlim(-40, 40)
 plt.plot([0, -Delta], [params['theta']]*2, 'k.')
 plt.show()
 

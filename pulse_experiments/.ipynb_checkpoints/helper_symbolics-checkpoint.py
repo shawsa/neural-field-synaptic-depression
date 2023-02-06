@@ -197,7 +197,7 @@ if __name__ == '__main__':
                     for var in ['Delta', 'c', 'mu', 'theta'])
 
     U_num, Q_num, Up_num, Qp_num = get_traveling_pulse(params, validate=False)
-    xs = np.linspace(-40, 40, 401)
+    xs = np.linspace(-20, 20, 401)
     plt.figure('Traveling wave.')
     plt.plot(xs, U_num(xs), 'b-', label='$U$')
     plt.plot(xs, Q_num(xs), 'b--', label='$Q$')
@@ -205,8 +205,8 @@ if __name__ == '__main__':
     plt.xlim(-30, 20)
     plt.legend()
     plt.title('Traveling Pulse (numerical)')
-    plt.show()
     plt.savefig(PULSE_FILE_NAME)
+    plt.show()
 
     # test nullspace amplitudes formula
 
@@ -216,7 +216,7 @@ if __name__ == '__main__':
     plt.plot(xs, v1_num(xs), label='$v_1$')
     plt.plot(xs, v2_num(xs), label='$v_2$')
     plt.xlim(-15, 15)
-    plt.ylim(-2e-3, 1e-2)
+    plt.ylim(-2.5e-4, 1.2e-3)
     plt.title('bi-exponential nullspace (semi-analytical)')
     plt.legend()
     plt.show()

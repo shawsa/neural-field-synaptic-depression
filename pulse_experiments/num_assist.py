@@ -23,7 +23,7 @@ We determine the true value of Delta using a binary search that enforces this
 condition.
 
 The null-space calculations have not yet been implemented, but preliminary
-work suggests this can be expressed analytically as the function of two 
+work suggests this can be expressed analytically as the function of two
 quadratures dependent on the pulse profile.
 """
 
@@ -204,7 +204,7 @@ def find_delta(Delta_min, Delta_max,
                verbose=False,
                tol=1e-5,
                **_):
-    """Use a binary search to find the pulse width. We enforce 
+    """Use a binary search to find the pulse width. We enforce
     U(-Delta) = theta.
 
     Note, each evaluation of Delta performs a binary search
@@ -230,7 +230,7 @@ def find_delta(Delta_min, Delta_max,
 def pulse_profile(xs_right: Domain,
                   xs_left: Domain,
                   *, c, Delta, alpha, gamma, mu, theta, weight_kernel, **_):
-    """Approximate the profile of the activity (U) and synaptic 
+    """Approximate the profile of the activity (U) and synaptic
     efficacy (Q) variables on the domain. This should only be used
     after correct values of the pulse width (Delta) and pulse speed
     (c) are known (to sufficient accuracy).
@@ -258,6 +258,31 @@ def pulse_profile(xs_right: Domain,
     Qs = Q_profile(xs, alpha, gamma, c, Delta)
     return xs, Us, Qs
 
+def nullspace_amplitudes(
+        dUmD, QmD,
+        c, Delta,
+        mu, beta,
+        weight_kernel,
+        **_):
+    """Find the values A0 (A_0) and AmD (A_{-Delta}) that denote the
+    aplitude of the two components of the first null-space function (v1).
+    WOLOG, A0 = 1. AmD is computed semi-analytically, using a formula that
+    requires two numerical quadratures.
+    """
+
+    g0_domain = Domain(0, 4*Delta, 2001)
+    def g0(z):
+        return g0_domain.quad(weight_kernel(z-g0_domain.array) *
+                              np.exp(-g0_domain.array/c/mu))
+
+    gmD_domain = Domain(-Delta, 4*Delta, 2001)
+    def gmD(z):
+        return gmD_domain.quad(weight_kernel(z-gmD_domain.array) *
+                               np.exp(-gmD_domain.array/c/mu))
+
+    A0 = 1
+    AmD = g0(-Delta) / (c*mu*abs(dUmD)/QmD*np.exp(Delta/c/mu) - gmD(-Delta))
+    return A0, AmD
 
 def v1(xs, A0, AmD, *, mu, c, Delta, **_):
     """The first function of the adjoint null-space pair,
@@ -268,7 +293,7 @@ def v1(xs, A0, AmD, *, mu, c, Delta, **_):
             A0*np.heaviside(xs, 0))
 
 
-def make_wv1(*, 
+def make_wv1(*,
              zs: np.ndarray,
              A0,
              AmD,
@@ -287,95 +312,88 @@ def make_wv1(*,
     my_slice = slice(10, -10)
     return lambda z: local_interp(z, zs[my_slice], ys[my_slice])
 
-def v2_mid(zs: Domain, *, wv1, c, alpha, Delta, A0, AmD, beta, v0=1, **_):
-    def my_forcing(x, v):
-        return -1/(c*alpha)*(v - wv1(x)-beta*v)
-    return shoot_backward(zs, v0, my_forcing)
+# To satisfy BCs we require v2_left = 0. We can shoot forward from
+# v2(-Delta) = 0 to v2(0), and then use the analytic solution for
+# v2_right.
 
-def v2_shoot_forward(xs_right: Domain, *,
-                     c, alpha, v0=1, **_):
-    def my_forcing(x, v):
-        return -1/c/alpha*v
-    return shoot_forward(xs_right, v0, my_forcing)
 
-def v2_shoot_backward(xs_left: Domain, *,
-                      c, alpha, beta, Delta,
-                      wv1, v0=1, **_):
-    def my_forcing(x, v):
-        if x <= -Delta:
-            return -1/c/alpha*v
-        return -1/c/alpha*((1+beta)*v - wv1(x))
-    return shoot_backward(xs_left, v0, my_forcing)
-    
-# fix me
-# def find_nullspace_roots(
-#         A0, AmD, *,
-#         dU0, Q0, dUmD, QmD,
-#         c, Delta,
-#         mu, alpha, beta,
-#         weight_kernel,
-#         **_):
-# 
-#     xs = np.linspace(-4*Delta, 4*Delta, 2001)
-#     conv0_vals = fftconvolve(weight_kernel(xs),
-#                              np.heaviside(xs, 0)*np.exp(-(1/c/mu)*xs),
-#                              mode='same')
-#     conv0 = lambda z: local_interp(z, xs, conv0_vals)
-#     convmD_vals = fftconvolve(weight_kernel(xs),
-#                               np.heaviside(xs+Delta, 0)*np.exp(-(1/c/mu)*xs),
-#                               mode='same')
-#     convmD = lambda z: local_interp(z, xs, convmD_vals)
-#     A0_conv0_coeff = Q0/abs(dU0)*conv0(0)-1
-#     A0_convmD_coeff = Q0/abs(dU0)*convmD(0)
-#     AmD_conv0_coeff = QmD/abs(dUmD)*conv0(0)
-#     AmD_convmD_coeff = QmD/abs(dUmD)*convmD(0)-1
-# 
-#     zs = Domain(-Delta, 0, 2001)
-# 
-#     v2 = v2_mid(zs=zs, wv1=wv1, A0=0, AmD=AmD,
-#                 c=c, alpha=alpha, Delta=Delta, beta=beta)
-# 
-#     A0_root = -A0 + 1/c/mu * (Q0/abs(dU0)*wv1(0) - alpha*beta*v2[-1])
-#     AmD_root = -AmD + 1/c/mu * (QmD/abs(dUmD)*wv1(-Delta) - alpha*beta*v2[0])
-# 
-#     return A0_root, AmD_root
+def v2_mid(xs: Domain, *, mu, alpha, beta,
+           c, Delta,
+           weight_kernel,
+           A0, AmD, **_
+           ):
+    vmD = 0
+    zs = np.linspace(-4*Delta, 4*Delta, 4001)
+    wv1 = make_wv1(zs=zs, A0=A0, AmD=AmD,
+                   mu=mu, c=c, Delta=Delta, weight_kernel=weight_kernel)
+    forcing = lambda x, v: -1/(c*alpha) * ((1+beta)*v - wv1(x))
+    return shoot_forward(xs, vmD, forcing)
+
+def v2_right(xs: np.ndarray, *, v0, c, alpha):
+    return v0*np.exp(-xs/(c*alpha))
+
+def v2(xs: np.ndarray, *, mu, alpha, beta,
+           c, Delta,
+           weight_kernel,
+           A0, AmD, **_
+           ):
+    ys = np.zeros_like(xs)
+    inner_slice = slice(np.argmax(xs >= -Delta), np.argmin(xs <= 0))
+    zs = Domain(xs[inner_slice][0], xs[inner_slice][-1],
+                len(xs[inner_slice]))
+    ys[inner_slice] = v2_mid(zs, mu=mu, alpha=alpha, beta=beta,
+                      c=c, Delta=Delta,
+                      weight_kernel=weight_kernel,
+                      A0=A0, AmD=AmD)
+    ys[xs >= 0] = v2_right(xs[xs >=0],
+                           v0 = ys[inner_slice][-1], c=c, alpha=alpha)
+    return ys
+
+# redo these
+
+# def v2_mid(zs: Domain, *, wv1, c, alpha, Delta, A0, AmD, beta, v0=1, **_):
+#     def my_forcing(x, v):
+#         return -1/(c*alpha)*(v - wv1(x)-beta*v)
+#     return shoot_backward(zs, v0, my_forcing)
+#
+# def v2_shoot_forward(xs_right: Domain, *,
+#                      c, alpha, v0=1, **_):
+#     def my_forcing(x, v):
+#         return -1/c/alpha*v
+#     return shoot_forward(xs_right, v0, my_forcing)
+#
+# def v2_shoot_backward(xs_left: Domain, *,
+#                       c, alpha, beta, Delta,
+#                       wv1, v0=1, **_):
+#     def my_forcing(x, v):
+#         if x <= -Delta:
+#             return -1/c/alpha*v
+#         return -1/c/alpha*((1+beta)*v - wv1(x))
+#     return shoot_backward(xs_left, v0, my_forcing)
 
 #############################################
-# 
+#
 # To do
 #
 #############################################
-# verify the analytic calculation of the nullspace.
-# Implement here.
 # Comare to theory plots.
 # See if you can derive the result analytically using this defered evaluation
 # approach.
 
 
-def nullspace_amplitudes(
-        dU0, Q0, dUmD, QmD,
-        c, Delta,
-        mu, alpha, beta,
-        weight_kernel,
-        **_):
-    
-    g0_domain = Domain(0, 4*Delta, 2001)
-    def g0(z):
-        return g0_domain.quad(weight_kernel(z-g0_domain.array) * \
-                              np.exp(-g0_domain.array/c/mu))
-
-    gmD_domain = Domain(-Delta, 4*Delta, 2001)
-    def gmD(z):
-        return gmD_domain.quad(weight_kernel(z-gmD_domain.array) * \
-                               np.exp(-gmD_domain.array/c/mu))
-
-    A0 = 1
-    AmD = g0(-Delta) / (c*mu * abs(dUmD)/QmD * np.exp(Delta/c/mu) - gmD(-Delta))
-    return A0, AmD
-
-
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    import experiment_defaults
+    import os
+
+    NULLSPACE_FILE_NAME = os.path.join(
+            experiment_defaults.media_path,
+            'bi-exponential nullspace (numerical).png')
+
+    PULSE_FILE_NAME = os.path.join(
+            experiment_defaults.media_path,
+            'bi-exponential pulse (numerical).png')
+
     def weight_kernel(x):
         return .5*np.exp(-np.abs(x))
 
@@ -385,21 +403,23 @@ if __name__ == '__main__':
         'beta': 5.0,
         'mu': 1.0
     }
-
     params['gamma'] = 1/(1+params['beta'])
     params['weight_kernel'] = weight_kernel
-
     xs_right = Domain(0, 200, 8001)
     xs_left = Domain(-200, 0, 8001)
-
-    Delta = find_delta(7, 20, 1, 10, xs_left, xs_right, verbose=True, **params)
-    c = find_c(1, 10, xs_right, Delta=Delta, verbose=True, **params)
-    # Us_right = U_shoot_forward(xs_right, c=c, Delta=Delta, **params)
-    # Us_left = U_shoot_backward(xs_left, c=c, Delta=Delta, **params)
-    # plt.plot(xs_right.array, Us_right)
-    # plt.plot(xs_left.array, Us_left)
-    # plt.plot([-Delta, 0], [params['theta']]*2, 'ko')
-    # plt.ylim(-.1, 1.1)
+    """Finding the speed and pulse width can be slow. Saving them for a given
+    parameter set helps for rappid testing."""
+    USE_SAVED_VALUES = True
+    if USE_SAVED_VALUES:
+        c, Delta = 1.0509375967740198, 9.553535461425781
+        print(f'c={c}\nDelta={Delta}')
+    else:
+        Delta_interval = (7, 20)
+        speed_interval = (1, 10)
+        Delta = find_delta(*Delta_interval, *speed_interval,
+                           xs_left, xs_right, verbose=True, **params)
+        c = find_c(*speed_interval,  xs_right,
+                   Delta=Delta, verbose=True, **params)
 
     params_full = {
         'c': c,
@@ -409,23 +429,36 @@ if __name__ == '__main__':
 
     xs, Us, Qs = pulse_profile(xs_right, xs_left, **params_full)
     plt.figure('Traveling wave.')
-    plt.plot(xs, Us, 'b-')
-    plt.plot(xs, Qs, 'b--')
+    plt.plot(xs, Us, 'b-', label='$U$')
+    plt.plot(xs, Qs, 'b--', label='$Q$')
     plt.plot([-Delta, 0], [params['theta']]*2, 'k.')
+    plt.xlim(-30, 20)
+    plt.legend()
+    plt.title('Traveling Pulse (numerical)')
+    plt.savefig(PULSE_FILE_NAME)
     plt.show()
 
     # nullspace
     nullspace_params = {
             **params_full,
-            'dU0': local_diff(0, xs, Us),
-            'dUmD' : local_diff(-Delta, xs, Us),
-            'Q0':  local_interp(0, xs, Qs),
-            'QmD': local_interp(-Delta, xs, Qs)
+            'dU0':  local_diff(0, xs, Us),
+            'dUmD': local_diff(-Delta, xs, Us),
+            'Q0':   local_interp(0, xs, Qs),
+            'QmD':  local_interp(-Delta, xs, Qs)
     }
 
     A0, AmD = nullspace_amplitudes(**nullspace_params)
+    v1_arr = v1(xs, A0, AmD, **params_full)
+    zs = Domain(-Delta, 0, 201)
+    v2_arr = v2(xs, A0=A0, AmD=AmD, **params_full)
     print(A0, AmD)
 
     plt.figure('Nullspace')
-    plt.plot(xs, v1(xs, A0, AmD, **params_full))
+    plt.plot(xs, v1_arr, label='$v_1$')
+    plt.plot(xs, v2_arr, label='$v_2$')
+    plt.xlim(-15, 15)
+    plt.ylim(-2e-3, .5)
+    plt.title('bi-exponential nullspace (numerical)')
+    plt.legend()
     plt.show()
+    plt.savefig(NULLSPACE_FILE_NAME)
