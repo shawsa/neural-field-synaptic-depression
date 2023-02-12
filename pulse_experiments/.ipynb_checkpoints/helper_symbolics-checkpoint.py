@@ -135,11 +135,13 @@ def get_numerical_parameters(input_params, precision=15, validate=True):
     M = sym.Matrix(
             [[condition.coeff(v) for v in my_vars]
              for condition in numerical_conditions])
-
+    display(M)
+    print(np.array(M, dtype=float))
     eigen_vals, eigen_vect_mat = la.eig(np.array(M, dtype=float))
     # find closest to 0
     eigen_val, eigen_vect = sorted(zip(eigen_vals, eigen_vect_mat.T),
                                    key=lambda tup: abs(tup[0]))[0]
+    eigen_vect /= eigen_vect[0] # normalize according to A0 = 1
     for var, sub in zip(my_vars, eigen_vect):
         params[var] = sub
 
@@ -186,7 +188,7 @@ if __name__ == '__main__':
     params = {
             r'\mu':    1.0,
             r'\alpha': 20.0,
-            r'\beta':  0.25,
+            r'\beta':  0.25, # this was before the switch from alpha*beta |--> beta
             r'\theta':  0.2
     }
     params = get_numerical_parameters(params)
@@ -197,7 +199,7 @@ if __name__ == '__main__':
                     for var in ['Delta', 'c', 'mu', 'theta'])
 
     U_num, Q_num, Up_num, Qp_num = get_traveling_pulse(params, validate=False)
-    xs = np.linspace(-20, 20, 401)
+    xs = np.linspace(-40, 40, 401)
     plt.figure('Traveling wave.')
     plt.plot(xs, U_num(xs), 'b-', label='$U$')
     plt.plot(xs, Q_num(xs), 'b--', label='$Q$')
@@ -205,8 +207,8 @@ if __name__ == '__main__':
     plt.xlim(-30, 20)
     plt.legend()
     plt.title('Traveling Pulse (numerical)')
-    plt.savefig(PULSE_FILE_NAME)
     plt.show()
+    plt.savefig(PULSE_FILE_NAME)
 
     # test nullspace amplitudes formula
 
@@ -216,8 +218,8 @@ if __name__ == '__main__':
     plt.plot(xs, v1_num(xs), label='$v_1$')
     plt.plot(xs, v2_num(xs), label='$v_2$')
     plt.xlim(-15, 15)
-    plt.ylim(-2.5e-4, 1.2e-3)
+    plt.ylim(-2e-3, 1e-2)
     plt.title('bi-exponential nullspace (semi-analytical)')
     plt.legend()
-    plt.show()
     plt.savefig(NULLSPACE_FILE_NAME)
+    plt.show()

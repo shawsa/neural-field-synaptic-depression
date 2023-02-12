@@ -1,6 +1,5 @@
 """Generate and plot the traveling pulse profile and adjoint nullspace
-for the wizzard hat  weight kernel (a laterally inhibitory kernel)
-and the specified parameters.
+for the bi-exponential weight kernel and the specified parameters.
 
 The algorithmic and numerical details are desricbed in num_assist.py.
 """
@@ -14,21 +13,18 @@ from num_assist import Domain, find_delta, find_c, pulse_profile, nullspace_ampl
 
 NULLSPACE_FILE_NAME = os.path.join(
         experiment_defaults.media_path,
-        'wizzard-hat nullspace (numerical).png')
+        'bi-exponential nullspace (numerical).png')
 
 PULSE_FILE_NAME = os.path.join(
         experiment_defaults.media_path,
-        'wizzard-hat pulse (numerical).png')
-
+        'bi-exponential pulse (numerical).png')
 
 def weight_kernel(x):
-    abs_x = np.abs(x)
-    return (1-.5*abs_x)*np.exp(-abs_x)
-
+    return .5*np.exp(-np.abs(x))
 
 params = {
     'theta': 0.2,
-    'alpha': 20,
+    'alpha': 20.0,
     'beta': 5.0,
     'mu': 1.0,
     'weight_kernel': weight_kernel
@@ -37,13 +33,15 @@ params['gamma'] = 1/(1+params['beta'])
 xs_right = Domain(0, 200, 8001)
 xs_left = Domain(-200, 0, 8001)
 
+"""Finding the speed and pulse width can be slow. Saving them for a given
+parameter set helps for rappid testing."""
 USE_SAVED_VALUES = True
 if USE_SAVED_VALUES:
-    c, Delta = 0.6157679207346518, 5.515222549438477
+    c, Delta = 1.0509375967740198, 9.553535461425781
     print(f'c={c}\nDelta={Delta}')
 else:
-    Delta_interval = (5, 10)
-    speed_interval = (.1, 4)
+    Delta_interval = (7, 20)
+    speed_interval = (1, 10)
     Delta = find_delta(*Delta_interval, *speed_interval,
                        xs_left, xs_right, verbose=True, **params)
     c = find_c(*speed_interval,  xs_right,
@@ -63,6 +61,7 @@ plt.title('Traveling Pulse (numerical)')
 plt.savefig(PULSE_FILE_NAME)
 plt.show()
 
+
 A0, AmD = nullspace_amplitudes(xs, Us, Qs, **params)
 print(f'A_0={A0}\tA_{{-Delta}}={AmD}')
 params['A0'] = A0
@@ -75,7 +74,7 @@ plt.figure('Nullspace')
 plt.plot(xs, v1_arr, label='$v_1$')
 plt.plot(xs, v2_arr, label='$v_2$')
 plt.xlim(-15, 15)
-plt.ylim(-4e-3, 1e-2)
+plt.ylim(-2e-3, 1e-2)
 plt.title('bi-exponential nullspace (numerical)')
 plt.legend()
 plt.savefig(NULLSPACE_FILE_NAME)

@@ -135,11 +135,11 @@ def get_numerical_parameters(input_params, precision=15, validate=True):
     M = sym.Matrix(
             [[condition.coeff(v) for v in my_vars]
              for condition in numerical_conditions])
-
     eigen_vals, eigen_vect_mat = la.eig(np.array(M, dtype=float))
     # find closest to 0
     eigen_val, eigen_vect = sorted(zip(eigen_vals, eigen_vect_mat.T),
                                    key=lambda tup: abs(tup[0]))[0]
+    eigen_vect /= eigen_vect[0] # normalize according to A0 = 1
     for var, sub in zip(my_vars, eigen_vect):
         params[var] = sub
 
@@ -186,7 +186,7 @@ if __name__ == '__main__':
     params = {
             r'\mu':    1.0,
             r'\alpha': 20.0,
-            r'\beta':  0.25,
+            r'\beta':  0.25, # this was before the switch from alpha*beta |--> beta
             r'\theta':  0.2
     }
     params = get_numerical_parameters(params)
@@ -204,9 +204,9 @@ if __name__ == '__main__':
     plt.plot([-Delta, 0], [theta]*2, 'k.')
     plt.xlim(-30, 20)
     plt.legend()
-    plt.title('Traveling Pulse (numerical)')
-    plt.show()
+    plt.title('Traveling Pulse (semi-analytical)')
     plt.savefig(PULSE_FILE_NAME)
+    plt.show()
 
     # test nullspace amplitudes formula
 
@@ -219,5 +219,5 @@ if __name__ == '__main__':
     plt.ylim(-2e-3, 1e-2)
     plt.title('bi-exponential nullspace (semi-analytical)')
     plt.legend()
-    plt.show()
     plt.savefig(NULLSPACE_FILE_NAME)
+    plt.show()
