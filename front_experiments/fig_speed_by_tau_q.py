@@ -6,22 +6,12 @@ simulated and compared to asymptotic approximation.
 
 import experiment_defaults
 
-from adaptive_front import U_numeric, Q_numeric, get_speed, response
 from functools import partial
 from itertools import product
 import matplotlib
 import matplotlib.pyplot as plt
-from neural_field import (NeuralField,
-                          Parameters,
-                          heaviside_firing_rate,
-                          exponential_weight_kernel)
 import numpy as np
 import os.path
-from root_finding_helpers import find_roots
-from space_domain import SpaceDomain
-from time_domain import TimeDomain_Start_Stop_MaxSpacing
-from time_integrator import Euler
-from time_integrator_tqdm import TqdmWrapper
 from tqdm import tqdm
 
 def get_min_gamma(*, mu, alpha, theta):

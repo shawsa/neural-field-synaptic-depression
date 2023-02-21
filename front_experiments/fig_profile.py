@@ -11,7 +11,7 @@ import numpy as np
 import os.path
 
 from adaptive_front import U_numeric, Q_numeric
-from neural_field import ParametersBeta
+from neural_field import Parameters
 from plotting_styles import U_style, Q_style, solution_styles, threshold_style
 
 
@@ -19,7 +19,7 @@ def main():
 
     file_name = 'front_profile'
 
-    params = ParametersBeta(mu=1.0, alpha=20.0, beta=0.2)
+    params = Parameters(mu=1.0, alpha=20.0, gamma=0.2)
     theta = 0.1
 
     profile_xs = np.linspace(-100, 20, 201)

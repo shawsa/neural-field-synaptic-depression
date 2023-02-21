@@ -9,10 +9,7 @@ import experiment_defaults
 from adaptive_front import U_numeric, Q_numeric, get_speed, response
 from functools import partial
 import matplotlib.pyplot as plt
-from neural_field import (NeuralField,
-                          ParametersBeta,
-                          heaviside_firing_rate,
-                          exponential_weight_kernel)
+from neural_field import NeuralField, Parameters, heaviside_firing_rate, exponential_weight_kernel
 import numpy as np
 import os.path
 from root_finding_helpers import find_roots
@@ -25,9 +22,9 @@ from tqdm import tqdm
 
 def main():
 
-    file_name = 'wave_response_small'
+    FILE_NAME = 'wave_response_small'
 
-    params = ParametersBeta(mu=1.0, alpha=20.0, beta=0.2)
+    params = Parameters(mu=1.0, alpha=20.0, gamma=.2)
     theta = 0.1
 
     space = SpaceDomain(-100, 200, 10**4)
@@ -50,7 +47,7 @@ def main():
     pulse_profile[1] *= 0
 
     asymptotic = response(epsilon, **params.dict, theta=theta)
-    speed = get_speed(mu=params.mu, alpha=params.alpha, gamma=params.gamma, theta=theta)
+    speed = get_speed(theta=theta, **params.dict)
 
     solver = TqdmWrapper(EulerDelta(delta_time, epsilon*pulse_profile))
 
@@ -75,7 +72,7 @@ def main():
     axes[1].legend()
     for extension in ['.png', '.eps']:
         plt.savefig(os.path.join(experiment_defaults.media_path,
-                                 file_name + extension))
+                                 FILE_NAME + extension))
     plt.show()
 
 if __name__ == '__main__':

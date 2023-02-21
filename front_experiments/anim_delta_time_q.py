@@ -10,10 +10,7 @@ import numpy as np
 import os.path
 from adaptive_front import U_numeric, Q_numeric
 from functools import partial
-from neural_field import (NeuralField,
-                          ParametersBeta,
-                          heaviside_firing_rate,
-                          exponential_weight_kernel)
+from neural_field import NeuralField, Parameters, heaviside_firing_rate, exponential_weight_kernel
 from plotting_helpers import make_animation
 from space_domain import SpaceDomain
 from time_domain import TimeDomain, TimeDomain_Start_Stop_MaxSpacing
@@ -27,7 +24,7 @@ def main():
     file_name = os.path.join(experiment_defaults.media_path,
                              'delta_time_q.mp4')
 
-    params = ParametersBeta(mu=1.0, alpha=20.0, beta=0.2)
+    params = Parameters(mu=1.0, alpha=20.0, gamma=.2)
     theta = 0.1
 
     # space = SpaceDomain(-100, 200, 10**4)

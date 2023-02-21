@@ -38,10 +38,9 @@ def main():
 
 
     U_num, Q_num, *_ = get_traveling_pulse({'theta': theta, **params.dict})
-    
+
     num_params = get_numerical_parameters({'theta': 0.2, **params.dict})
     print(num_params)
-    break
 
     initial_offset = 0
     u0 = np.empty((2, space.num_points))

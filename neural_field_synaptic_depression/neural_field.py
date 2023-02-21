@@ -17,15 +17,18 @@ class Parameters:
         self.mu = mu
         self.alpha = alpha
         self.gamma = gamma
-
-        self.beta = 1/alpha * (1/gamma - 1)
+        self.beta = 1/gamma - 1
 
     @property
     def dict(self):
         return {
             'mu': self.mu,
             'alpha': self.alpha,
-            'beta': self.beta}
+            'beta': self.beta,
+            'gamma': self.gamma}
+
+    def __repr__(self):
+        return 'Params(' + str(self.dict) + ')'
 
 
 class ParametersBeta(Parameters):
@@ -35,7 +38,7 @@ class ParametersBeta(Parameters):
         self.alpha = alpha
         self.beta = beta
 
-        self.gamma = 1/(1 + alpha*beta)
+        self.gamma = 1/(1 + beta)
 
 
 class NeuralField:
@@ -67,7 +70,7 @@ class NeuralField:
         temp = self.firing_rate(u)
         v_new = np.empty_like(v)
         v_new[0] = 1/self.params.mu * (-u + self.conv(q*temp))
-        v_new[1] = (1 - q)/self.params.alpha - self.params.beta*q*temp
+        v_new[1] = (1 - q - self.params.beta*q*temp)/self.params.alpha
         return v_new
 
 

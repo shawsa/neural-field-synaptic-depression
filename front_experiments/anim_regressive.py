@@ -10,11 +10,7 @@ import numpy as np
 import os.path
 from adaptive_front import U_numeric, Q_numeric
 from functools import partial
-from neural_field import (NeuralField,
-                          ParametersBeta,
-                          Parameters,
-                          heaviside_firing_rate,
-                          exponential_weight_kernel)
+from neural_field import NeuralField, Parameters, heaviside_firing_rate, exponential_weight_kernel
 from plotting_helpers import make_animation
 from space_domain import SpaceDomain
 from time_domain import TimeDomain, TimeDomain_Start_Stop_MaxSpacing
@@ -27,14 +23,11 @@ def main():
     file_name = os.path.join(experiment_defaults.media_path,
                              'regressive.mp4')
 
-    # params = ParametersBeta(mu=1.0, alpha=10, beta=.2)
     params1 = Parameters(mu=1.0, alpha=10, gamma=0.25)
     params2 = Parameters(mu=1.0, alpha=10, gamma=0.20)
     params3 = Parameters(mu=1.0, alpha=10, gamma=0.15)
     theta = 0.1
 
-    # space = SpaceDomain(-100, 200, 10**4)
-    # time = TimeDomain_Start_Stop_MaxSpacing(0, 18, 1e-3/5)
     space = SpaceDomain(-100, 400, 10**4)
     time = TimeDomain_Start_Stop_MaxSpacing(0, 100, 1e-2)
 
@@ -43,22 +36,22 @@ def main():
     u0[1] = np.ones_like(space.array)*.2
 
     model1 = NeuralField(space=space,
-                        firing_rate=partial(heaviside_firing_rate,
-                                            theta=theta),
-                        weight_kernel=exponential_weight_kernel,
-                        params=params1)
+                         firing_rate=partial(heaviside_firing_rate,
+                                             theta=theta),
+                         weight_kernel=exponential_weight_kernel,
+                         params=params1)
 
     model2 = NeuralField(space=space,
-                        firing_rate=partial(heaviside_firing_rate,
-                                            theta=theta),
-                        weight_kernel=exponential_weight_kernel,
-                        params=params2)
+                         firing_rate=partial(heaviside_firing_rate,
+                                             theta=theta),
+                         weight_kernel=exponential_weight_kernel,
+                         params=params2)
 
     model3 = NeuralField(space=space,
-                        firing_rate=partial(heaviside_firing_rate,
-                                            theta=theta),
-                        weight_kernel=exponential_weight_kernel,
-                        params=params3)
+                         firing_rate=partial(heaviside_firing_rate,
+                                             theta=theta),
+                         weight_kernel=exponential_weight_kernel,
+                         params=params3)
 
     print('solving model 1')
     solver = TqdmWrapper(Euler())
@@ -79,7 +72,8 @@ def main():
                    time.array,
                    space.array,
                    [us1, us2, us3],
-                   us_labels=[f'$\\gamma = {params.gamma}$' for params in [params1, params2, params3]],
+                   us_labels=[f'$\\gamma = {params.gamma}$'
+                              for params in [params1, params2, params3]],
                    theta=theta,
                    x_window=(-15, 160),
                    y_window=(-.1, 1.3),
