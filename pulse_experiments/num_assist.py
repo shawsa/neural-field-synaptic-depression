@@ -122,6 +122,8 @@ def bin_search(a, b, func, tol=1e-10, format_str=None):
     func_a = func(a)
     func_b = func(b)
     assert func_a*func_b <= 0
+    if format_str is not None:
+        print(format_str % (a, b))
     done = False
     while not done:
         c = (a+b)/2

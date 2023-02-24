@@ -41,39 +41,46 @@ class Solution:
     def arr(self):
         return np.array((self.mu, self.alpha, self.gamma, self.theta))
 
-    def dist(self, target: Solution):
+    def dist(self, target):
         return la.norm(self.arr - target.arr)
 
     @property
     def dict(self):
         return {'mu': self.mu,
-               'alpha': self.alpha,
-               'gamma': self.gamma,
-               'theta': self.theta}
+                'alpha': self.alpha,
+                'gamma': self.gamma,
+                'theta': self.theta}
 
-    def solve(self, c_approx, Delta_approx, search_window_width=0.1, verbose=False):
+    def solve(self, c_approx, Delta_approx, search_window_width=0.1,
+              delta_tol=1e-2, speed_tol=1e-2,
+              verbose=False):
         """Throws assertion error if either binary search fails."""
 
         speed_interval = ((1-search_window_width)*c_approx, (1+search_window_width)*c_approx)
         Delta_interval = ((1-search_window_width)*Delta_approx, (1+search_window_width)*Delta_approx)
         Delta = find_delta(*Delta_interval, *speed_interval,
                            xs_left, xs_right, verbose=verbose, weight_kernel=weight_kernel,
-                           **self.dict)
+                           **self.dict, tol=delta_tol)
         c = find_c(*speed_interval,  xs_right,
                    Delta=Delta, verbose=verbose, weight_kernel=weight_kernel,
-                   **self.dict)
+                   **self.dict, tol=speed_tol)
         self.speed = c
         self.width = Delta
 
+
 class SolutionSearch:
     def __init__(self, seed: Solution):
-        assert seed.speed is not None
-        assert seed.width is not None
-        self.solutions = [seed]
+        self.solutions = []
+        self.add(seed)
+
+    def add(self, sol: Solution):
+        assert sol.speed is not None
+        assert sol.width is not None
+        self.solutions.append(sol)
 
     def closest_to(self, target: Solution):
         dist, sol = min([(target.dist(sol), sol) for sol in self.solutions],
-                         key=lambda tup: tup[0])
+                        key=lambda tup: tup[0])
         return sol
 
     @staticmethod
@@ -83,64 +90,47 @@ class SolutionSearch:
         direction = difference / la.norm(difference)
         return Solution(*(sol1.arr + direction*step_size))
 
-    def find_indermediate(self, target: Solution, step_size=10, window_width=.1):
-        start = self.closest_to(target)
-        target = sol_interp(start, target)
-        # pick up here!!!!!!!
-    
+    def _find_indermediate(self, start: Solution, target: Solution,
+                           step_size, window_width,
+                           verbose=False):
+        """Tries to find a new solution in the direction of the target that
+        is at most `step_size` away (in Euclidean distance). Can throw
+        assertion errors if the binary search fails.
+        """
+        target = SolutionSearch.sol_interp(start, target, step_size)
+        if verbose:
+            print(f'Attempting solve: {target}')
+        target.solve(start.speed, start.width,
+                     search_window_width=window_width,
+                     verbose=verbose)
+        self.add(target)
+        return target
 
-
-
-FILE_NAME = os.path.join(
-        experiment_defaults.media_path,
-        'bifurcation.pickle')
-
-params = {
-    'theta': 0.2,
-    'beta': 5.0,
-    'mu': 1.0,
-    'weight_kernel': weight_kernel
-}
-params['gamma'] = 1/(1+params['beta'])
-xs_right = Domain(0, 200, 8001)
-xs_left = Domain(-200, 0, 8001)
-
-alpha = 20.0
-speed_interval = 1.0, 1.1
-Delta_interval = 5, 13
-c, Delta = 1.0509375967740198, 9.553535461425781
-Delta = find_delta(*Delta_interval, *speed_interval,
-                   xs_left, xs_right, verbose=True,
-                   alpha=alpha, **params)
-c = find_c(*speed_interval,  xs_right,
-           Delta=Delta, verbose=True,
-           alpha=alpha, **params)
-
-alphas = [alpha]
-speeds = [c]
-widths = [Delta]
-alpha_low = 10.0
-alpha_step = 1 
-while alpha > alpha_low:
-    alpha -= alpha_step
-    speed_interval = (c*.9, c*1.1)
-    Delta_interval = (Delta*.9, Delta*1.1)
-    try:
-        print(f'Searching for alpha={alpha}')
-        Delta = find_delta(*Delta_interval, *speed_interval,
-                           xs_left, xs_right, verbose=True,
-                           alpha=alpha, **params)
-        c = find_c(*speed_interval,  xs_right,
-                   Delta=Delta, verbose=True,
-                   alpha=alpha, **params)
-        alphas.append(alpha)
-        speeds.append(c)
-        widths.append(Delta)
-    except AssertionError as e:
-        print(e)
+    def seek(self, target: Solution,
+             min_step_size=0.01, window_width=0.1,
+             verbose=False):
+        """Attempts to traverse the parameter space, finding intermediate
+        solutions, until it arives at the target solution."""
+        sol = self.closest_to(target)
+        step_size = sol.dist(target)
+        while sol.dist(target) > 1e-5:
+            try:
+                sol = self._find_indermediate(sol, target, step_size,
+                                              window_width, verbose=verbose)
+            except AssertionError:
+                step_size /= 2
+                if step_size < min_step_size:
+                    raise ValueError
+                if verbose:
+                    print(f'Attempt, failed, refining step-size: {step_size}')
+                continue
+        return sol
 
 
 if __name__ == '__main__':
+    FILE_NAME = os.path.join(
+            experiment_defaults.data_path,
+            'bifurcation.pickle')
     start_params = {
         'alpha': 20.0,
         'theta': 0.2,
@@ -154,8 +144,19 @@ if __name__ == '__main__':
     print(sol)
     sol_search = SolutionSearch(sol)
     test = start_params.copy()
-    test['alpha'] = 19.0
+    test['alpha'] = 13.0
     sol_test = Solution(**test)
-    sol_search.closest_to(sol_test)
-    SolutionSearch.sol_interp(sol, sol_test, 3.4)
+    for window_width, min_step in [(0.1, 0.01), (0.05, 0.005), (0.001, 0.0001)]:
+        try:
+            sol_search.seek(sol_test,
+                            min_step_size=min_step,
+                            window_width=window_width,
+                            verbose=True)
+        except ValueError:
+            print('refining window')
+            continue
 
+    print(f'Solutions found: {len(sol_search.solutions)}')
+
+    with open(FILE_NAME, 'wb') as f:
+        pickle.dump(sol_search, f)
