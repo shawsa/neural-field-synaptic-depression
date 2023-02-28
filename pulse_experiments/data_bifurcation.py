@@ -1,13 +1,15 @@
-"""Generate data for pulse-width and pulse-speed for a varaiety of parameter combinations.
+"""Generate data for pulse-width and pulse-speed for a varaiety of parameter
+combinations. Given a set of model parameters and approximate intervals
+containing the speed and width we can use the `find_c` and `find_delta`
+functions from the `num_assist.py` module to to determine the solution
+precisely (using binary searches). Since the speed and width are continuous
+with respect to the parameter inputs, we can use a given solution for a set of
+paramters to generate new solutions for similar sets of parameters.
 
-Given a set of model parameters and approximate intervals containing the speed and width
-we can use the `find_c` and `find_delta` functions from the `num_assist.py` module to
-to determine the solution precisely (using binary searches). Since the speed and width
-are continuous with respect to the parameter inputs, we can use a given solution for a set
-of paramters to generate new solutions for similar sets of parameters.
-
-One caviat is that we expect there to be regions in parameter space without solutions.
+One caviat is that we expect there to be regions in parameter space without
+solutions.
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
@@ -16,6 +18,8 @@ import pickle
 
 import experiment_defaults
 from num_assist import Domain, find_delta, find_c, pulse_profile, nullspace_amplitudes, v1, v2
+
+from itertools import product
 
 xs_right = Domain(0, 200, 8001)
 xs_left = Domain(-200, 0, 8001)
@@ -67,6 +71,34 @@ class Solution:
         self.speed = c
         self.width = Delta
 
+    def refine(self, verbose=False):
+        """Find a more exact solution using the found speed and width as a starting point."""
+        self.solve(c_approx = self.speed, Delta_approx=self.width,
+                   search_window_width=1e-2, delta_tol=1e-5, speed_tol=1e-8,
+                   verbose=verbose)
+
+    def plot(self, ax=None, color='blue'):
+        try:
+            xs, Us, Qs = pulse_profile(xs_left, xs_right,
+                                       c=self.speed, Delta=self.width,
+                                       weight_kernel=weight_kernel, **self.dict)
+        except ValueError:
+            xs, Us, Qs = pulse_profile(xs_left, xs_right,
+                                       c=self.speed, Delta=self.width,
+                                       weight_kernel=weight_kernel, **self.dict,
+                                       vanish_tol=None)
+        if ax is None:
+            plt.figure()
+            plt.plot(xs, Us, '-', color=color)
+            plt.plot(xs, Qs, '--', color=color)
+            plt.ylim(-.1, 1.1)
+        else:
+            ax.plot(xs, Us, '-', color=color)
+            ax.plot(xs, Qs, '--', color=color)
+            ax.set_ylim(-.1, 1.1)
+
+
+
 
 class SolutionSearch:
     def __init__(self, seed: Solution):
@@ -115,6 +147,8 @@ class SolutionSearch:
         step_size = sol.dist(target)
         while sol.dist(target) > 1e-5:
             try:
+                if verbose:
+                    print(f'Attempting a step: {sol}')
                 sol = self._find_indermediate(sol, target, step_size,
                                               window_width, verbose=verbose)
             except AssertionError:
@@ -138,22 +172,41 @@ if __name__ == '__main__':
         'mu': 1.0
     }
     start_params['gamma'] = 1/(1+start_params['beta'])
-
     sol = Solution(**start_params)
+    print('Solving seed solution.')
     sol.solve(c_approx=1.05, Delta_approx=9.5, verbose=True)
     print(sol)
+    sol.plot()
+
     sol_search = SolutionSearch(sol)
-    test = start_params.copy()
-    test['alpha'] = 13.0
-    sol_test = Solution(**test)
-    for window_width, min_step in [(0.1, 0.01), (0.05, 0.005), (0.001, 0.0001)]:
+    alphas = list(range(20, 7, -1))
+    gammas = [0.13, 0.14, 0.15, 0.17, 0.19]
+    gammas.sort(key=lambda x: abs(x - sol.gamma))
+    for gamma in gammas:
+        print(f'Seeking target: gamma={gamma}')
+        my_sol = Solution(**{**start_params,
+                             'gamma': gamma})
+        print(f'Seeking {my_sol}')
         try:
-            sol_search.seek(sol_test,
-                            min_step_size=min_step,
-                            window_width=window_width,
+            sol_search.seek(my_sol, min_step_size=1e-5,
                             verbose=True)
+            print('Target found')
         except ValueError:
-            print('refining window')
+            print('Aborting seek.')
+
+    gammas.sort()
+
+    for gamma, alpha in product(gammas, alphas):
+        print(f'Seeking target: alpha={alpha}, gamma={gamma}')
+        my_sol = Solution(**{**start_params,
+                             'alpha': alpha,
+                             'gamma': gamma})
+        print(f'Seeking {my_sol}')
+        try:
+            sol_search.seek(my_sol, verbose=True)
+            print('Target found')
+        except ValueError:
+            print('Aborting seek.')
             continue
 
     print(f'Solutions found: {len(sol_search.solutions)}')

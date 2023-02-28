@@ -229,9 +229,10 @@ def find_delta(Delta_min, Delta_max,
 
     return bin_search(Delta_min, Delta_max, func, format_str=format_str, tol=tol)
 
-def pulse_profile(xs_right: Domain,
-                  xs_left: Domain,
-                  *, c, Delta, alpha, gamma, mu, theta, weight_kernel, **_):
+def pulse_profile(xs_left: Domain,
+                  xs_right: Domain,
+                  *, c, Delta, alpha, gamma, mu, theta, weight_kernel,
+                  vanish_tol=1e-5, **_):
     """Approximate the profile of the activity (U) and synaptic
     efficacy (Q) variables on the domain. This should only be used
     after correct values of the pulse width (Delta) and pulse speed
@@ -254,8 +255,9 @@ def pulse_profile(xs_right: Domain,
                                mu=mu,
                                theta=theta,
                                weight_kernel=weight_kernel)
-    vanish_index = max(i for i in range(len(Us_right)) if abs(Us_right[i]) < 1e-5)
-    Us_right[vanish_index:] = 0
+    if vanish_tol is not None:
+        vanish_index = max(i for i in range(len(Us_right)) if abs(Us_right[i]) < vanish_tol)
+        Us_right[vanish_index:] = 0
     Us = np.hstack((Us_left[:-1], Us_right))
     Qs = Q_profile(xs, alpha, gamma, c, Delta)
     return xs, Us, Qs

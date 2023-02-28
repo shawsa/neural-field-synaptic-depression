@@ -24,19 +24,17 @@ FILE_NAME = os.path.join(experiment_defaults.data_path,
                          'delta_time_amp_grid.pickle')
 
 N = 5
-eps_range = (-0.01, 0.01)
+eps_range = (-0.08, 0.08)
 eps_u_array = np.linspace(*eps_range, N)
 eps_q_array = np.linspace(*eps_range, N)
 
-# params = Parameters(mu=1.0, alpha=20.0, gamma=0.2)
-params = Parameters(mu=1.0, alpha=7.0, gamma=0.2)
+params = Parameters(mu=1.0, alpha=20.0, gamma=0.2)
 theta = 0.1
 
 speed = get_speed(theta=theta, **params.dict)
 
 space = BufferedSpaceDomain(-100, 200, 2*10**4, .2)
 time = TimeDomain_Start_Stop_MaxSpacing(0, 10, 1e-4/2)
-# solver = Euler()
 solver = TqdmWrapper(Euler())
 
 u0 = np.empty((2, space.num_points))
@@ -54,9 +52,11 @@ response_mat = np.zeros_like(eps_u_mat)
 
 
 loop_len = len(eps_u_array)*len(eps_q_array)
-for (u_index, eps_u), (q_index, eps_q) in tqdm(product(enumerate(eps_u_array), enumerate(eps_q_array)), total=loop_len):
-    u0[0] = U_numeric(space.array, **params.dict, theta=theta) + eps_u
-    u0[1] = Q_numeric(space.array, **params.dict, theta=theta) + eps_q
+for (u_index, eps_u), (q_index, eps_q) in tqdm(product(enumerate(eps_u_array),
+                                                       enumerate(eps_q_array)),
+                                               total=loop_len):
+    u0[0] = U_numeric(space.array, **params.dict, theta=theta) + eps_u/params.mu
+    u0[1] = Q_numeric(space.array, **params.dict, theta=theta) + eps_q/params.alpha
 
     us = solver.t_final(u0, model.rhs, time)
     fronts = find_roots(space.inner, us[0][space.inner_slice]-theta, window=3)
