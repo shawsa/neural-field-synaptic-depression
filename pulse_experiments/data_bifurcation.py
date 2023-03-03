@@ -165,6 +165,14 @@ if __name__ == '__main__':
     FILE_NAME = os.path.join(
             experiment_defaults.data_path,
             'bifurcation.pickle')
+
+    if False:
+        """Load the previously saved search. This is included to help
+        explore using the REPL.
+        """
+        with open(FILE_NAME, 'rb') as f:
+            sol_search = pickle.load(f)
+
     start_params = {
         'alpha': 20.0,
         'theta': 0.2,
@@ -176,7 +184,6 @@ if __name__ == '__main__':
     print('Solving seed solution.')
     sol.solve(c_approx=1.05, Delta_approx=9.5, verbose=True)
     print(sol)
-    sol.plot()
 
     sol_search = SolutionSearch(sol)
     alphas = list(range(20, 7, -1))
@@ -203,13 +210,15 @@ if __name__ == '__main__':
                              'gamma': gamma})
         print(f'Seeking {my_sol}')
         try:
-            sol_search.seek(my_sol, verbose=True)
+            sol_search.seek(my_sol, min_step_size=1e-4,
+                            verbose=True)
             print('Target found')
         except ValueError:
             print('Aborting seek.')
             continue
 
     print(f'Solutions found: {len(sol_search.solutions)}')
+    plt.plot(*zip(*((sol.alpha, sol.gamma) for sol in sol_search.solutions)), '.')
 
     with open(FILE_NAME, 'wb') as f:
         pickle.dump(sol_search, f)

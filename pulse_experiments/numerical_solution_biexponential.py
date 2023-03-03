@@ -13,11 +13,11 @@ from num_assist import Domain, find_delta, find_c, pulse_profile, nullspace_ampl
 
 NULLSPACE_FILE_NAME = os.path.join(
         experiment_defaults.media_path,
-        'bi-exponential nullspace (numerical).png')
+        'bi-exponential nullspace (numerical)')
 
 PULSE_FILE_NAME = os.path.join(
         experiment_defaults.media_path,
-        'bi-exponential pulse (numerical).png')
+        'bi-exponential pulse (numerical)')
 
 def weight_kernel(x):
     return .5*np.exp(-np.abs(x))
@@ -50,15 +50,17 @@ else:
 params['c'] = c
 params['Delta'] = Delta
 
-xs, Us, Qs = pulse_profile(xs_right, xs_left, **params)
+xs, Us, Qs = pulse_profile(xs_left=xs_left, xs_right=xs_right, **params)
 plt.figure('Traveling wave.')
 plt.plot(xs, Us, 'b-', label='$U$')
 plt.plot(xs, Qs, 'b--', label='$Q$')
 plt.plot([-Delta, 0], [params['theta']]*2, 'k.')
+plt.plot(xs, params['theta']+0*xs, 'k:', label='$\\theta$')
 plt.xlim(-30, 20)
 plt.legend()
 plt.title('Traveling Pulse (numerical)')
-plt.savefig(PULSE_FILE_NAME)
+for extension in ['.png', '.eps']:
+    plt.savefig(PULSE_FILE_NAME + extension)
 plt.show()
 
 
@@ -77,5 +79,6 @@ plt.xlim(-15, 15)
 plt.ylim(-2e-3, 1e-2)
 plt.title('bi-exponential nullspace (numerical)')
 plt.legend()
-plt.savefig(NULLSPACE_FILE_NAME)
+for extension in ['.png', '.eps']:
+    plt.savefig(NULLSPACE_FILE_NAME + extension)
 plt.show()

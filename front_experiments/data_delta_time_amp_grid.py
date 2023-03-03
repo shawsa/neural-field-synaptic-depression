@@ -23,18 +23,18 @@ from tqdm import tqdm
 FILE_NAME = os.path.join(experiment_defaults.data_path,
                          'delta_time_amp_grid.pickle')
 
-N = 5
+N = 21
 eps_range = (-0.08, 0.08)
-eps_u_array = np.linspace(*eps_range, N)
-eps_q_array = np.linspace(*eps_range, N)
+eps_u_array = np.linspace(-.08, 0.08, N)
+eps_q_array = np.linspace(-.8, .8, N)
 
 params = Parameters(mu=1.0, alpha=20.0, gamma=0.2)
 theta = 0.1
 
 speed = get_speed(theta=theta, **params.dict)
 
-space = BufferedSpaceDomain(-100, 200, 2*10**4, .2)
-time = TimeDomain_Start_Stop_MaxSpacing(0, 10, 1e-4/2)
+space = BufferedSpaceDomain(-100, 200, 4*10**4, .2)
+time = TimeDomain_Start_Stop_MaxSpacing(0, 10, 1e-4)
 solver = TqdmWrapper(Euler())
 
 u0 = np.empty((2, space.num_points))

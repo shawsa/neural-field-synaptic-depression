@@ -28,7 +28,7 @@ seed = sol_search.solutions[0]
 plt.plot(seed.alpha, seed.gamma, 'm*', markersize=20)
 plt.plot(*(zip(*product(alphas, gammas))), 'b*')
 plt.plot(*zip(*((sol.alpha, sol.gamma) for sol in sol_search.solutions)), 'g.')
-plt.xlabel(r'$\alpha$')
+plt.xlabel(r'$\tau_q$')
 plt.ylabel(r'$\gamma$')
 plt.title('Paramter combinations with found solutions.')
 
@@ -39,16 +39,16 @@ for ext in ['.eps', '.png']:
     plt.savefig(IMAGE_FILE_NAME + ext)
 
 
-plt.figure('Speed by alpha')
+plt.figure('Speed by synaptic time scale')
 for gamma in gammas:
     pairs = sorted((sol.alpha, sol.speed) for sol in sol_search.solutions
                    if sol.gamma == gamma)
     if len(pairs) > 0:
         plt.plot(*zip(*pairs), '.-', label=f'$\\gamma={gamma:.2f}$')
 
-plt.xlabel(r'$\alpha$')
+plt.xlabel(r'$\tau_q$')
 plt.ylabel(r'$c$')
-plt.title('Speed by alpha')
+plt.title('$c$ by $\\tau_q$')
 plt.legend()
 IMAGE_FILE_NAME = os.path.join(
         experiment_defaults.media_path,
@@ -56,16 +56,16 @@ IMAGE_FILE_NAME = os.path.join(
 for ext in ['.eps', '.png']:
     plt.savefig(IMAGE_FILE_NAME + ext)
 
-plt.figure('Width by alpha')
+plt.figure('Width by synaptic time scale')
 for gamma in gammas:
     pairs = sorted((sol.alpha, sol.width) for sol in sol_search.solutions
                    if sol.gamma == gamma)
     if len(pairs) > 0:
         plt.plot(*zip(*pairs), '.-', label=f'$\\gamma={gamma:.2f}$')
 
-plt.xlabel(r'$\alpha$')
+plt.xlabel(r'$\tau_q$')
 plt.ylabel(r'$\Delta$')
-plt.title('Width by alpha')
+plt.title('Width by $\\tau_q$')
 plt.legend()
 
 IMAGE_FILE_NAME = os.path.join(
@@ -77,13 +77,13 @@ for ext in ['.eps', '.png']:
 plt.figure('Speed by gamma')
 for alpha in alphas:
     pairs = sorted((sol.gamma, sol.speed) for sol in sol_search.solutions
-                   if sol.alpha == alpha)
+                   if abs(sol.alpha - alpha)<3e-2)
     if len(pairs) > 0:
         plt.plot(*zip(*pairs), '.-', label=f'$\\alpha={alpha}$')
 
 plt.xlabel(r'$\gamma$')
 plt.ylabel(r'$c$')
-plt.title('Speed by gamma')
+plt.title('Speed by $\\gamma$')
 plt.legend()
 
 IMAGE_FILE_NAME = os.path.join(
@@ -95,7 +95,7 @@ for ext in ['.eps', '.png']:
 plt.figure('Width by gamma')
 for alpha in alphas:
     pairs = sorted((sol.gamma, sol.width) for sol in sol_search.solutions
-                   if sol.alpha == alpha)
+                   if abs(sol.alpha - alpha)<3e-2)
     if len(pairs) > 0:
         plt.plot(*zip(*pairs), '.-', label=f'$\\alpha={alpha}$')
 
