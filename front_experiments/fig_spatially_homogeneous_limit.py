@@ -31,13 +31,15 @@ with open(DATA_FILE_NAME, 'rb') as f:
 
 response_slope = response(1, **params.dict, theta=theta)
 
-plt.figure(figsize=(7, 4))
-plt.plot(epsilons, responses, 'go', label='measured')
-plt.plot(epsilons, epsilons*response_slope, 'k-', label='asyptotic')
+plt.figure(figsize=(5, 3))
+plt.plot(epsilons, epsilons*response_slope, 'k-', label='Theory')
+plt.plot(epsilons, responses, 'go', label='Simulation')
 
 plt.xlabel('$\\epsilon$')
 plt.ylabel('$\\nu_\\infty$')
-plt.title('Response to $I(x,t) = \\epsilon \\delta(t)$')
+plt.title('Front response to global stimulus')
+plt.legend(loc='upper left')
+plt.tight_layout()
 
 for extension in ['.png', '.eps']:
     plt.savefig(FIG_FILE_NAME + extension)

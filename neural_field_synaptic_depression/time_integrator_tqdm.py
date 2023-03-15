@@ -1,5 +1,5 @@
 '''
-Uses the tqdm package to wrap solution generators from the 
+Uses the tqdm package to wrap solution generators from the
 TimeIntegrator class.
 '''
 
@@ -24,3 +24,7 @@ class TqdmWrapper:
                       total=time.steps):
             pass
         return u
+
+    def solution_generator(self, u0, rhs, time: TimeDomain):
+        yield from tqdm(self.solver.solution_generator(u0, rhs, time),
+                        total=time.steps)

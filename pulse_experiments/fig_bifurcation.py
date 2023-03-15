@@ -39,17 +39,19 @@ for ext in ['.eps', '.png']:
     plt.savefig(IMAGE_FILE_NAME + ext)
 
 
-plt.figure('Speed by synaptic time scale')
+plt.figure('Speed by synaptic time scale', figsize=(5,3))
 for gamma in gammas:
     pairs = sorted((sol.alpha, sol.speed) for sol in sol_search.solutions
-                   if sol.gamma == gamma)
+                   if abs(sol.gamma-gamma) < 1e-4)
     if len(pairs) > 0:
         plt.plot(*zip(*pairs), '.-', label=f'$\\gamma={gamma:.2f}$')
 
 plt.xlabel(r'$\tau_q$')
 plt.ylabel(r'$c$')
-plt.title('$c$ by $\\tau_q$')
-plt.legend()
+# plt.title('$c$ by $\\tau_q$')
+plt.title('Pulse Speed')
+plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
+plt.tight_layout()
 IMAGE_FILE_NAME = os.path.join(
         experiment_defaults.media_path,
         'bifurcation_alpha_speed')

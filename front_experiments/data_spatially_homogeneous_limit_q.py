@@ -1,6 +1,5 @@
 #!/usr/bin/python3
-'''
-A driver for the neural field simulator. Consider this a manual test of
+''' A driver for the neural field simulator. Consider this a manual test of
 most of the functionality.
 '''
 
@@ -26,8 +25,8 @@ FILE_NAME = 'spatially_homogeneous_limit_q.pickle'
 
 params = Parameters(mu=1.0, alpha=20.0, gamma=0.2)
 theta = 0.1
-space = BufferedSpaceDomain(-100, 200, 10**4, .2)
-time = TimeDomain_Start_Stop_MaxSpacing(0, 30, 1e-3/5)
+space = BufferedSpaceDomain(-100, 300, 10**5, .1)
+time = TimeDomain_Start_Stop_MaxSpacing(0, 60, 1e-3)
 initial_offset = 0
 u0 = np.empty((2, space.num_points))
 u0[0] = U_numeric(space.array+initial_offset, theta=theta, **params.dict)
@@ -44,14 +43,15 @@ pulse_profile[0] *= 0
 speed = get_speed(theta=theta, **params.dict)
 base_response = speed * time.array[-1] - initial_offset
 
-epsilons = np.linspace(-0.01, 0.01, 3)
+epsilons = np.linspace(-0.08, 0.08, 11)
 responses = []
 for eps_index, epsilon in enumerate(epsilons):
     print(f'{eps_index+1}/{len(epsilons)}')
-    solver = TqdmWrapper(EulerDelta(delta_time, epsilon*pulse_profile))
+    solver = TqdmWrapper(EulerDelta(delta_time, epsilon/params.alpha*pulse_profile))
     u, q = solver.t_final(u0, model.rhs, time)
     front = find_roots(space.inner, u[space.inner_slice]-theta, window=3)
     responses.append(front - base_response)
+    print(epsilon, responses[-1])
 
 with open(os.path.join(experiment_defaults.data_path, FILE_NAME), 'wb') as f:
     pickle.dump((params, theta, epsilons, responses), f)

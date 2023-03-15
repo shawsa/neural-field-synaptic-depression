@@ -1,8 +1,4 @@
 #!/usr/bin/python3
-'''
-A driver for the neural field simulator. Consider this a manual test of
-most of the functionality.
-'''
 
 import experiment_defaults
 
@@ -12,7 +8,7 @@ import numpy as np
 import os.path
 import pickle
 from tqdm import tqdm
-from adaptive_front import U_numeric, Q_numeric, get_speed, response
+from adaptive_front import U_numeric, Q_numeric, get_speed, response_q
 from neural_field import NeuralField, Parameters, heaviside_firing_rate, exponential_weight_kernel
 from space_domain import BufferedSpaceDomain
 from time_domain import TimeDomain_Start_Stop_MaxSpacing
@@ -29,10 +25,15 @@ FIG_FILE_NAME = os.path.join(experiment_defaults.media_path,
 with open(DATA_FILE_NAME, 'rb') as f:
     params, theta, epsilons, responses = pickle.load(f)
 
-response_slope = response(1, **params.dict, theta=theta)
+for index, eps in enumerate(epsilons):
+    if eps == 0.0:
+        break
+numerical_offset = responses[index]
+
+response_slope = response_q(1, **params.dict, theta=theta)
 
 plt.figure(figsize=(7, 4))
-plt.plot(epsilons, responses, 'go', label='measured')
+plt.plot(epsilons, responses-numerical_offset, 'go', label='measured')
 plt.plot(epsilons, epsilons*response_slope, 'k-', label='asyptotic')
 
 plt.xlabel('$\\epsilon$')

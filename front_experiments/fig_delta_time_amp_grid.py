@@ -21,6 +21,11 @@ def epsilon_u_q_slope(*, mu, alpha, beta, theta, c, **_):
     return (1+c*alpha)/2/(1+beta+c*alpha)/(1+c*mu) / (c*mu)
 
 
+def point_slope_line(point, slope, xs):
+    x, y = point
+    return [(z-x)*slope + y for z in xs]
+
+
 data_file_name = os.path.join(experiment_defaults.data_path,
                               'delta_time_amp_grid.pickle')
 image_file_name = os.path.join(experiment_defaults.media_path,
@@ -44,14 +49,20 @@ plt.pcolormesh(eps_u, eps_q, res, vmin=z_min, vmax=z_max,
 # plt.colorbar(label='$\\nu_\\infty$')
 contour_set = plt.contour(eps_u, eps_q, res, levels=range(-4, 15, 2), colors='k')
 
+
+
+my_xs = eps_u[0]
 slope = -1/epsilon_u_q_slope(c=speed, theta=theta, **params.dict)
-theory_color = 'green'
+eps_q_max = np.max(eps_q)
+theory_color = 'm'
 unit_response = response(1.0, **params.dict, theta=theta)
 for eps in (val/unit_response for val in [-2.0, 0.0, 2.0, 4.0]):
     response_eps = response(eps, **params.dict, theta=theta)
-    print(response_eps)
-    plt.plot([eps-.08, eps+.08], [slope*-.08, slope*.08], linestyle=':', color=theory_color, linewidth=3.0)
-    plt.text(eps+0.001+0.08/slope, 0.08+0.001, f'{response_eps:0.2f}', color=theory_color)
+    plt.plot(my_xs, point_slope_line((eps, 0), slope, my_xs),
+             linestyle=':', color=theory_color)
+    my_x = point_slope_line((0, eps), 1/slope, [eps_q_max])[0]
+    plt.text(my_x, eps_q_max*1.05, f'{response_eps:.2f}', color=theory_color)
+
 
 plt.clabel(contour_set, fmt='%.2f')
 plt.xlabel('$\\epsilon_u$')

@@ -43,7 +43,7 @@ def main():
                         weight_kernel=exponential_weight_kernel,
                         params=params)
 
-    delta_time = 1
+    delta_time = 5
     epsilon = 0.09
     pulse_profile = np.ones_like(u0)
     pulse_profile[1] *= 0
@@ -69,7 +69,7 @@ def main():
                    theta=theta,
                    x_window=(-15, 80),
                    title=f'$I_u(x,t) = {epsilon}\\delta(t-{delta_time})$',
-                   frames=100,
+                   frames=200,
                    fps=24,
                    animation_interval=400)
 

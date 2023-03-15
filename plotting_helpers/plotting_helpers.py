@@ -67,13 +67,15 @@ def make_animation(file_name,
     if file_name is not None:
         anim = animation.FuncAnimation(fig,
                                        animate,
-                                       tqdm(frames_array),
+                                       frames=tqdm(frames_array),
+                                       # tqdm(frames_array),
                                        init_func=init,
                                        interval=animation_interval,
                                        blit=True)
 
-        anim.save(file_name, writer='imagemagick', fps=fps)
-
+        # anim.save(file_name, writer='imagemagick', fps=fps)
+        # anim.save(file_name, writer='ffmpeg', fps=fps)
+        anim.save(file_name, writer='ffmpeg', fps=fps, extra_args=['-loglevel', 'debug'])
         plt.close()
 
     else:

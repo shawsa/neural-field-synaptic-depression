@@ -50,15 +50,22 @@ else:
 params['c'] = c
 params['Delta'] = Delta
 
+custom = {
+    'linewidth': 2.0
+}
+
 xs, Us, Qs = pulse_profile(xs_left=xs_left, xs_right=xs_right, **params)
-plt.figure('Traveling wave.')
-plt.plot(xs, Us, 'b-', label='$U$')
-plt.plot(xs, Qs, 'b--', label='$Q$')
-plt.plot([-Delta, 0], [params['theta']]*2, 'k.')
-plt.plot(xs, params['theta']+0*xs, 'k:', label='$\\theta$')
+plt.figure('Traveling wave.', figsize=(5, 3))
+plt.plot(xs, Us, 'b-', label='$U$', **custom)
+plt.plot(xs, Qs, 'b--', label='$Q$', **custom)
+# plt.plot([-Delta, 0], [params['theta']]*2, 'k.')
+plt.plot(xs, params['theta']+0*xs, 'k:', label='$\\theta$', **custom)
+plt.plot([-Delta, 0], [0]*2, color='gray', linewidth=5.0, label='Active Region')
 plt.xlim(-30, 20)
-plt.legend()
-plt.title('Traveling Pulse (numerical)')
+plt.xlabel('$\\xi$')
+plt.legend(loc='upper left')
+plt.title('Traveling Pulse Profile')
+plt.tight_layout()
 for extension in ['.png', '.eps']:
     plt.savefig(PULSE_FILE_NAME + extension)
 plt.show()

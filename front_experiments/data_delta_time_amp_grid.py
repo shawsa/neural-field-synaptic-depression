@@ -26,15 +26,15 @@ FILE_NAME = os.path.join(experiment_defaults.data_path,
 N = 21
 eps_range = (-0.08, 0.08)
 eps_u_array = np.linspace(-.08, 0.08, N)
-eps_q_array = np.linspace(-.8, .8, N)
+eps_q_array = np.linspace(-.4, .4, N)
 
 params = Parameters(mu=1.0, alpha=20.0, gamma=0.2)
 theta = 0.1
 
 speed = get_speed(theta=theta, **params.dict)
 
-space = BufferedSpaceDomain(-100, 200, 4*10**4, .2)
-time = TimeDomain_Start_Stop_MaxSpacing(0, 10, 1e-4)
+space = BufferedSpaceDomain(-100, 300, 4*10**4, .2)
+time = TimeDomain_Start_Stop_MaxSpacing(0, 30, 1e-3)
 solver = TqdmWrapper(Euler())
 
 u0 = np.empty((2, space.num_points))

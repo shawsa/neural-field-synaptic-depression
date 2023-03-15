@@ -10,41 +10,65 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os.path
 
-from adaptive_front import U_numeric, Q_numeric
+from adaptive_front import U_numeric, Q_numeric, v1, v2, get_speed
 from neural_field import Parameters
 from plotting_styles import U_style, Q_style, solution_styles, threshold_style
 
 
-def main():
+PROFILE_FILE = 'front_profile'
+NULLSPACE_FILE = 'nullspace'
 
-    file_name = 'front_profile'
+params = Parameters(mu=1.0, alpha=20.0, gamma=0.2)
+theta = 0.1
 
-    params = Parameters(mu=1.0, alpha=20.0, gamma=0.2)
-    theta = 0.1
+c = get_speed(theta=theta, **params.dict)
 
-    profile_xs = np.linspace(-100, 20, 201)
-    plt.plot(profile_xs,
-             U_numeric(profile_xs, theta=theta, **params.dict),
-             **U_style,
-             **solution_styles[0],
-             label='$U$')
-    plt.plot(profile_xs,
-             Q_numeric(profile_xs, theta=theta, **params.dict),
-             **Q_style,
-             **solution_styles[0],
-             label='$Q$')
-    plt.plot(profile_xs,
-             theta+0*profile_xs,
-             **threshold_style,
-             label='$\\theta$')
-    plt.legend()
-    plt.title('Traveling Front Profile')
-    plt.xlabel('$\\xi$')
-    plt.tight_layout()
+xs = np.linspace(-50, 20, 201)
+custom = {
+    'linewidth': 2.0,
+}
 
-    for extension in ['.png', '.eps']:
-        plt.savefig(os.path.join(experiment_defaults.media_path,
-                                 file_name + extension))
+plt.figure(figsize=(5, 3))
+plt.plot(xs,
+         U_numeric(xs, theta=theta, **params.dict),
+         **U_style,
+         **solution_styles[0],
+         **custom,
+         label='$U$')
+plt.plot(xs,
+         Q_numeric(xs, theta=theta, **params.dict),
+         **Q_style,
+         **solution_styles[0],
+         **custom,
+         label='$Q$')
+plt.plot(xs,
+         theta+0*xs,
+         **threshold_style,
+         **custom,
+         label='$\\theta$')
+plt.plot([xs[0], 0], [0, 0], color='gray', linewidth=6.0, label='Active Region')
+plt.legend()
+plt.title('Traveling Front Profile')
+plt.xlabel('$\\xi$')
+plt.xlim(xs[0], xs[-1])
+plt.tight_layout()
 
-if __name__ == '__main__':
-    main()
+for extension in ['.png', '.eps']:
+    plt.savefig(os.path.join(experiment_defaults.media_path,
+                             PROFILE_FILE + extension))
+
+xs = np.linspace(-10, 60, 201)
+plt.figure(figsize=(5, 3))
+plt.plot(xs, v1(xs=xs, theta=theta, c=c, **params.dict), 'b-', label='$v_1$')
+plt.plot(xs, v2(xs=xs, theta=theta, c=c, **params.dict), 'b--', label='$v_2$')
+plt.ylim(-.01, 0.05)
+plt.xlabel('$\\xi$')
+plt.xlim(xs[0], xs[-1])
+plt.title('Front Nullspace')
+plt.legend()
+plt.tight_layout()
+for extension in ['.png', '.eps']:
+    plt.savefig(os.path.join(experiment_defaults.media_path,
+                             NULLSPACE_FILE + extension))
+
+

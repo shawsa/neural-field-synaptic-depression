@@ -89,20 +89,25 @@ unperturbed_solver = TqdmWrapper(Euler())
 us_unperturbed = unperturbed_solver.solve(u0, model.rhs, time)
 
 
-plt.figure('Wave Response Example', figsize=(7, 3))
+plt.figure('Wave Response Example', figsize=(5, 3))
 for index, color in [(0, 'b'),
                      (int(100*delta_time)+1, 'm'),
-                     (int(100*delta_time)+200, 'c'),
+                     #(int(100*delta_time)+200, 'c'),
                      (-1, 'g')]:
     plt.plot(space.array, us_unperturbed[index][0], linewidth=4.0, color=color, linestyle='--')
     plt.plot(space.array, us[index][0], linewidth=4.0, color=color)
     plt.plot([], [], color=color, label=f'$t={time.array[index]:.0f}$')
+
+plt.text(-20, 0.4, 'Aligned', color='b', rotation=45)
+plt.text(20, 0.4, '$t=20$', color='m', rotation=45)
+plt.text(35, 0.4, 'Shifted', color='g', rotation=45)
 plt.xlim(-20, 70)
 plt.plot([], [], 'k-', label='perturbed')
 plt.plot([], [], 'k--', label='unperturbed')
 plt.plot(space.array, params_dict['theta']+0*space.array, 'k:', label='$\\theta$')
 plt.ylabel('$u$')
 plt.xlabel('$x$')
+plt.title('Response Example')
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.tight_layout()
 plt.savefig(FIG_FILE_NAME)

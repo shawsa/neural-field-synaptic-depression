@@ -27,7 +27,7 @@ def main():
     file_name = os.path.join(experiment_defaults.media_path,
                              'square_space_delta_time_u.mp4')
 
-    params = ParametersBeta(mu=1.0, alpha=20.0, beta=0.25)
+    params = ParametersBeta(mu=1.0, alpha=20.0, beta=4.0)
     theta = 0.2
 
     # space = SpaceDomain(-100, 200, 10**4)
@@ -53,7 +53,7 @@ def main():
                         weight_kernel=exponential_weight_kernel,
                         params=params)
 
-    stim_center = -4
+    stim_center = 0
     stim_width = 5
     delta_time = 1
     epsilon = 0.2
