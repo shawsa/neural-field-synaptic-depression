@@ -9,10 +9,8 @@ import experiment_defaults
 import matplotlib.pyplot as plt
 import numpy as np
 import os.path
-import pickle
-
 from functools import partial
-from itertools import product
+from itertools import islice
 from neural_field import NeuralField, ParametersBeta, heaviside_firing_rate, exponential_weight_kernel
 from num_assist import Domain, find_delta, find_c, pulse_profile, nullspace_amplitudes, v1, v2, local_interp
 from plotting_helpers import make_animation
@@ -21,13 +19,12 @@ from space_domain import SpaceDomain, BufferedSpaceDomain
 from time_domain import TimeDomain, TimeDomain_Start_Stop_MaxSpacing
 from time_integrator import Euler, EulerDelta
 from time_integrator_tqdm import TqdmWrapper
-from tqdm import tqdm
 
 from scipy.stats import linregress
 from more_itertools import windowed
 
-FILE_NAME = os.path.join(experiment_defaults.data_path,
-                         'entrainment.pickle')
+FILE_NAME = os.path.join(experiment_defaults.media_path,
+                         'entrainment_flashing_pannel')
 
 params = ParametersBeta(**{
     'alpha': 20.0,
@@ -63,7 +60,7 @@ params_dict['Delta'] = Delta
 xis, Us, Qs = pulse_profile(xs_right=xs_right, xs_left=xs_left, **params_dict)
 
 space = BufferedSpaceDomain(-100, 200, 10**4, 0.1)
-time = TimeDomain_Start_Stop_MaxSpacing(0, 40, 1e-3)
+time = TimeDomain_Start_Stop_MaxSpacing(0, 20, 1e-3)
 
 initial_offset = 0
 u0 = np.empty((2, space.num_points))
@@ -78,17 +75,20 @@ model = NeuralField(
                 params=params)
 
 solver = TqdmWrapper(Euler())
-window_width = 10
 
 stim_start = -5
+stim_magnitude = 0.2
+stim_speed = 1.8
 
-results = []
-stim_speeds = np.linspace(1.2, 5, 21)
-stim_magnitudes = np.linspace(0, 0.5, 21)
+for pannel, freq in [
+        ('success', 0.5),
+        ('failure', 0.1)]:
 
-for stim_speed, stim_magnitude in tqdm(list(product(stim_speeds, stim_magnitudes))):
+    def stim_time_modulation(t):
+        return np.heaviside(np.sin(2*np.pi*freq*t), 0)
+
     def stim_func(t):
-        return stim_magnitude*np.exp(-np.abs(space.array - stim_start - stim_speed*t)**2)
+        return stim_magnitude*np.exp(-np.abs(space.array - stim_start - stim_speed*t)**2)*stim_time_modulation(t)
 
     def rhs(t, u):
         stim = np.zeros_like(u0)
@@ -96,53 +96,19 @@ for stim_speed, stim_magnitude in tqdm(list(product(stim_speeds, stim_magnitudes
         return model.rhs(t, u) + stim
 
     fronts = []
-    front_speeds = []
-    entrained = False
-    relative_stim_position = None
     for t, (u, q) in zip(time.array, solver.solution_generator(u0, rhs, time)):
         fronts.append(find_roots(space.inner, u[space.inner_slice]-params_dict['theta'], window=3)[-1])
-        if len(fronts) < window_width:
-            continue
-        front_speed = linregress(time.spacing*np.arange(window_width),
-                                 fronts[-window_width:]).slope
-        if abs(front_speed - stim_speed) < stim_speed/100:
-            entrained = True
-            relative_stim_position = fronts[-1] - (stim_speed*t+stim_start)
-            break
 
-    sol = {
-            'stim_speed': stim_speed,
-            'stim_magnitude': stim_magnitude,
-            'entrained': entrained,
-            'relative_stim_position': relative_stim_position
-    }
-    results.append(sol)
-
-
-plt.xlim(np.min(stim_magnitudes), np.max(stim_magnitudes))
-plt.ylim(np.min(stim_speeds), np.max(stim_speeds))
-
-mag_mat, stim_mat = np.meshgrid(stim_magnitudes, stim_speeds)
-
-# z_max = np.floor(np.max(np.nan_to_num(res, nan=-np.inf)))
-# z_min = np.ceil(np.min(np.nan_to_num(res, nan=np.inf)))
-# z_max, z_min = max(z_max, -z_min), min(-z_max, z_min)
-
-res_mat = np.zeros_like(mag_mat, dtype=bool)
-for index, (mag, speed) in enumerate(zip(mag_mat.flat, stim_mat.flat)):
-    for sol in results:
-        if sol['stim_magnitude'] == mag and sol['stim_speed'] == speed:
-            np.ravel(res_mat)[index] = sol['entrained']
-            break
-
-plt.pcolormesh(mag_mat, stim_mat, res_mat,
-               cmap='seismic', shading='gouraud')
-plt.plot(mag_mat, stim_mat, '.', color='gray')
-# plt.colorbar(label='$\\nu_\\infty$')
-plt.xlabel('Stimulus Magnitude')
-plt.ylabel('Stimulus Speed')
-plt.title('Entrainment to a moving Gaussian')
-plt.show()
-
-with open(FILE_NAME, 'wb') as f:
-    pickle.dump((stim_magnitudes, stim_speeds, results, params, params_dict), f)
+    plt.figure(figsize=(5, 3))
+    plt.plot(time.array[1:], fronts[1:], 'b.', label='stimulated front')
+    stim_active = time.array[stim_time_modulation(time.array) == 1.0]
+    plt.plot(stim_active, -5+0*stim_active, 'g.', label='stimulus active')
+    plt.plot(time.array, c*time.array, 'b--', label='unstimulated front')
+    plt.plot(time.array, stim_speed*time.array + stim_start, 'r-', label='stim center')
+    plt.legend()
+    plt.title(f'Frequency ={freq}')
+    plt.xlabel('$t$')
+    plt.ylabel('$x$')
+    plt.tight_layout()
+    for ext in ['.png', '.eps']:
+        plt.savefig(FILE_NAME + '_' + pannel + ext)

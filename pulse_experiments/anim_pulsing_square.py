@@ -77,11 +77,11 @@ model = NeuralField(
 solver = TqdmWrapper(Euler())
 
 FILE_NAME = 'entrainment_square_entrainment'
-stim_speed = 2
+stim_speed = 1.545
 stim_start = -1
-stim_magnitude = 0.5
+stim_magnitude = 0.1
 
-freq = 10
+freq = 0.82
 
 def stim_time_modulation(t):
     return np.heaviside(np.sin(2*np.pi*freq*t), 0)

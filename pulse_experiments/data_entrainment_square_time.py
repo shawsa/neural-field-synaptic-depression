@@ -65,7 +65,7 @@ params_dict['Delta'] = Delta
 xis, Us, Qs = pulse_profile(xs_right=xs_right, xs_left=xs_left, **params_dict)
 
 space = BufferedSpaceDomain(-100, 200, 10**4, 0.1)
-time = TimeDomain_Start_Stop_MaxSpacing(0, 40, 1e-3)
+time = TimeDomain_Start_Stop_MaxSpacing(0, 60, 1e-3)
 
 initial_offset = 0
 u0 = np.empty((2, space.num_points))
@@ -99,24 +99,13 @@ def check_entrainment(param_tuple):
         return model.rhs(t, u) + stim
 
     fronts = []
-    # front_speeds = []
     entrained = True
     relative_stim_position = None
     for t, (u, q) in zip(time.array, solver.solution_generator(u0, rhs, time)):
         fronts.append(find_roots(space.inner, u[space.inner_slice]-params_dict['theta'], window=3)[-1])
-        # if len(fronts) < window_width:
-        #     continue
-        # front_speed = linregress(time.spacing*np.arange(window_width),
-        #                          fronts[-window_width:]).slope
-        # if abs(front_speed - stim_speed) < stim_speed/100:
-        #     entrained = True
-        #     relative_stim_position = fronts[-1] - (stim_speed*t+stim_start)
-        #     break
-
         if fronts[-1] > 0 and (stim_start + stim_speed*t) - fronts[-1] > 3:
             entrained = False
             break
-
     sol = {
             'stim_speed': stim_speed,
             'stim_magnitude': stim_magnitude,
@@ -153,7 +142,7 @@ for ax, mag in zip(axes, stim_magnitudes):
     ax.plot(freq_mat, stim_mat, '.', color='gray')
     ax.set_xlabel('Stimulus frequency')
     ax.set_ylabel('Stimulus Speed')
-    ax.set_title(f'stim mag = {mag}')
+    ax.set_title(f'stim mag = {mag:.2f}')
 
 plt.suptitle('Entrainment to a moving pulsing Gaussian')
 # plt.colorbar(temp, ax=axes[-1])
