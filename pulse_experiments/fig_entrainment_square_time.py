@@ -65,7 +65,7 @@ plt.savefig('media/entrainment_pulsing_pannels.png')
 # contours figure
 freq_mat, speed_mat = np.meshgrid(stim_freqs, stim_speeds)
 colors = ['k', 'b', 'g', 'm', 'r']
-plt.figure()
+plt.figure(figsize=(5, 3))
 plt.plot(freq_mat.flat, speed_mat.flat, '.', color='lightgray')
 for mag, color in zip(stim_magnitudes, colors):
     res_mat = -np.ones_like(freq_mat, dtype=int)
@@ -77,10 +77,13 @@ for mag, color in zip(stim_magnitudes, colors):
     contour_set = plt.contour(freq_mat, speed_mat, res_mat, [0.5], colors=[color])
     plt.clabel(contour_set, [0.5], fmt={0.5: f'{mag:.2f}'})
 
+plt.text(0.7, 1.3, 'Entrainment')
+plt.text(0.15, 3.3, 'Non-Entrainment')
+
 plt.title('Entrainment to a moving pulsing Gaussian')
 plt.xlabel('Stimulus Frequency')
 plt.ylabel('Stimulus Speed')
-# plt.tight_layout()
+plt.tight_layout()
 plt.show()
 for ext in ['png', 'eps']:
     plt.savefig(FIG_FILE_NAME + '.' + ext)

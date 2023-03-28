@@ -95,7 +95,7 @@ for pannel, stim_speed in [
     for t, (u, q) in zip(time.array, solver.solution_generator(u0, rhs, time)):
         fronts.append(find_roots(space.inner, u[space.inner_slice]-params_dict['theta'], window=3)[-1])
 
-    plt.figure()
+    plt.figure(figsize=(5, 3))
     plt.plot(time.array[1:], fronts[1:], 'b.', label='stimulated front')
     plt.plot(time.array, c*time.array, 'b--', label='unstimulated front')
     plt.plot(time.array, stim_speed*time.array + stim_start, 'r-', label='stim center')

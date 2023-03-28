@@ -36,8 +36,8 @@ with open(FILE_NAME, 'rb') as f:
     stim_magnitudes, stim_speeds, results, params, params_dict = pickle.load(f)
 
 
-plt.xlim(np.min(stim_magnitudes), np.max(stim_magnitudes))
-plt.ylim(np.min(stim_speeds), np.max(stim_speeds))
+# plt.xlim(np.min(stim_magnitudes), np.max(stim_magnitudes))
+# plt.ylim(np.min(stim_speeds), np.max(stim_speeds))
 
 mag_mat, speed_mat = np.meshgrid(stim_magnitudes, stim_speeds)
 
@@ -48,7 +48,7 @@ for index, (mag, speed) in enumerate(zip(mag_mat.flat, speed_mat.flat)):
             np.ravel(res_mat)[index] = sol['entrained']
             break
 
-plt.figure(figsize=(5, 5))
+plt.figure(figsize=(5, 3))
 contour_set = plt.contour(mag_mat, speed_mat, res_mat, [0.5], colors=['black'])
 plt.plot(mag_mat.flat, speed_mat.flat, '.', color='lightgray')
 plt.text(.25, 2, 'Entrainment', fontsize='x-large')
@@ -56,6 +56,7 @@ plt.text(0.05, 4.0, 'Non-Entrainment', fontsize='x-large')
 plt.xlabel('Stimulus Magnitude')
 plt.ylabel('Stimulus Speed')
 plt.title('Entrainment to a moving Gaussian')
+plt.tight_layout()
 plt.show()
 for ext in ['.png', '.eps']:
     plt.savefig(FIG_FILE_NAME + ext)

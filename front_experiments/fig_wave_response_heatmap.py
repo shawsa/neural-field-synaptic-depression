@@ -69,7 +69,7 @@ y_slice = slice(0, t_stop_index, y_stride)
 
 sol_array = np.array([u[0][x_slice] for u in us[y_slice]]).T
 
-plt.figure(figsize=(7, 4))
+plt.figure(figsize=(5, 3))
 
 plt.pcolormesh(time.array[y_slice],
                space.array[x_slice],

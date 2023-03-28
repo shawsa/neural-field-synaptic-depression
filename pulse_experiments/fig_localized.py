@@ -70,7 +70,7 @@ plt.xlim(locations[0], locations[-1])
 plt.xlabel('$x_0$')
 plt.ylabel('$\\nu_\\infty$')
 plt.legend(loc='upper right')
-plt.title('Pulse response to spatially localized stimulus')
+plt.title('Pulse response to spatially localized stimulus (u)')
 plt.tight_layout()
 for ext in ['.eps', '.png']:
     plt.savefig(os.path.join(experiment_defaults.media_path, FIG_FILE_NAME+ext))
