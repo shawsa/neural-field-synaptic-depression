@@ -6,6 +6,7 @@ most of the functionality.
 
 import experiment_defaults
 
+import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 import os.path
@@ -24,7 +25,7 @@ from scipy.stats import linregress
 from more_itertools import windowed
 
 FILE_NAME = os.path.join(experiment_defaults.media_path,
-                         'apparent_motion.mp4')
+                         'apparent_motion.gif')
 
 params = ParametersBeta(**{
     'alpha': 20.0,
@@ -60,7 +61,7 @@ params_dict['Delta'] = Delta
 xis, Us, Qs = pulse_profile(xs_right=xs_right, xs_left=xs_left, **params_dict)
 
 space = BufferedSpaceDomain(-100, 200, 10**4, 0.1)
-time = TimeDomain_Start_Stop_MaxSpacing(0, 80, 1e-3)
+time = TimeDomain_Start_Stop_MaxSpacing(0, 20, 1e-3)
 
 initial_offset = 0
 u0 = np.empty((2, space.num_points))
@@ -76,12 +77,12 @@ model = NeuralField(
 
 solver = TqdmWrapper(Euler())
 
-FILE_NAME = 'entrainment_square_entrainment'
+# FILE_NAME = 'entrainment_square_entrainment'
 stim_speed = 2
-stim_start = -1
+stim_start = -4
 stim_magnitude = 0.1
 
-freq = .5
+freq = 0.5
 
 def time_apparent(t):
     return np.floor(t*freq)/freq
@@ -102,7 +103,7 @@ q_line, = axes[0].plot(space.array, u0[1], 'b--', label='synaptic efficacy')
 stim_line, = axes[0].plot(space.array, stim_func(0), 'm:', label='stimulus')
 front_line, = axes[0].plot([0], [params_dict['theta']], 'k.')
 stim_speed_line, = axes[0].plot([stim_start], [params_dict['theta']], 'k.')
-axes[0].set_xlim(-20, 200)
+axes[0].set_xlim(-20, 100)
 axes[0].set_xlabel('$x$')
 axes[0].legend(loc='upper left')
 axes[1].plot([], [], 'b.', label='front')
@@ -116,21 +117,25 @@ fronts = []
 # steps_per_frame = 97
 steps_per_frame = 47
 window_width = 20
-for index, (t, (u, q)) in enumerate(zip(time.array, solver.solution_generator(u0, rhs, time))):
-    fronts.append(find_roots(space.inner, u[space.inner_slice]-params_dict['theta'], window=3)[-1])
-    if len(fronts) > window_width:
-        front_speed = linregress([time.spacing]*np.arange(window_width),
-                                 fronts[-window_width:]).slope
-
-    if index % steps_per_frame == 0:
-        front_line.set_xdata([fronts[-1]])
+with imageio.get_writer(FILE_NAME, mode='I') as writer:
+    for index, (t, (u, q)) in enumerate(zip(time.array, solver.solution_generator(u0, rhs, time))):
+        fronts.append(find_roots(space.inner, u[space.inner_slice]-params_dict['theta'], window=3)[-1])
         if len(fronts) > window_width:
-            axes[1].plot(t, front_speed, 'b.', label='front')
-        u_line.set_ydata(u)
-        q_line.set_ydata(q)
-        stim_line.set_ydata(stim_func(t))
-        stim_speed_line.set_xdata([stim_speed*t + stim_start])
-        plt.pause(0.001)
+            front_speed = linregress([time.spacing]*np.arange(window_width),
+                                     fronts[-window_width:]).slope
+
+        if index % steps_per_frame == 0:
+            front_line.set_xdata([fronts[-1]])
+            if len(fronts) > window_width:
+                axes[1].plot(t, front_speed, 'b.', label='front')
+            u_line.set_ydata(u)
+            q_line.set_ydata(q)
+            stim_line.set_ydata(stim_func(t))
+            stim_speed_line.set_xdata([stim_speed*t + stim_start])
+            plt.savefig(FILE_NAME + '.png')
+            image = imageio.imread(FILE_NAME + '.png')
+            writer.append_data(image)
+            plt.pause(0.001)
 
 # plt.savefig('media/entrainment_test.png')
 
