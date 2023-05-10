@@ -72,7 +72,7 @@ mins_curve_speeds[mins_curve_speeds < 0] = np.nan
 # plt.plot(mins_curve_gammas, mins_curve_speeds, 'k.', markersize=1)
 plt.plot(mins_curve_gammas[nan_mask],
          mins_curve_speeds[nan_mask],
-         'k-', label='bifurcation')
+         'k-')# , label='bifurcation')
 
 for alpha, color in zip(alphas, colors):
     gamma_mins = get_min_gamma(mu=mu, alpha=alpha, theta=theta)
@@ -83,8 +83,8 @@ for alpha, color in zip(alphas, colors):
     plt.plot(gammas, speeds, '-', color=color, label=f'$\\tau_q={alpha}$')
     plt.plot(gammas, speeds2, ':', color=color)
     for gamma in gamma_mins:
-        desc = ((2*theta-1)*alpha + 2*theta*mu/gamma)**2 \
-                 - 8*theta*mu*alpha * (2*theta/gamma - 1)
+        desc = (((2*theta-1)*alpha + 2*theta*mu/gamma)**2 -
+                8*theta*mu*alpha * (2*theta/gamma - 1))
         assert np.all(np.abs(desc) < 1e-10)
         speed = get_speed(alpha=alpha, mu=mu, theta=theta,
                           gamma=gamma, desc=0)
@@ -92,18 +92,19 @@ for alpha, color in zip(alphas, colors):
 regressive_gammas = np.linspace(theta, 2*theta, 201)
 plt.plot(regressive_gammas,
          regressive_speed(mu=mu, theta=theta, gamma=regressive_gammas),
-         'r-',
-         label='regressive')
+         'r-')
 
 # plt.plot([theta]*2, [-5, 5], 'k:', label='$\\theta$')
-plt.plot([2*theta]*2, [-5, 5], 'k:', label='$\\gamma = 2\\theta$')
-plt.fill_between([-1, theta], 2*[5], 2*[-5], color='grey', label='$\\gamma < \\theta$')
+plt.plot([2*theta]*2, [-5, 5], 'k:')# , label='$\\gamma = 2\\theta$')
+plt.text(0.21, -3, r'$\gamma = 2\theta$')
+plt.fill_between([-1, theta], 2*[5], 2*[-5], color='grey')# , label='$\\gamma < \\theta$')
+plt.text(0.05, -3.5, 'Pulse Regime', color='white', rotation=90)
 plt.plot(2*theta, 0, 'k*', markersize=10)
 
 plt.legend(loc='lower right')
-plt.title('$c$ vs. $\\gamma$')
+plt.title('Speed vs. $\\gamma$')
 plt.xlabel('$\\gamma$')
-plt.ylabel('$c$')
+plt.ylabel('speed ($c$)')
 plt.xlim(.04, 1)
 plt.ylim(-4.1, 4.1)
 

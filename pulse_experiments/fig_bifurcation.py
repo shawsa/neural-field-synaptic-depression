@@ -20,6 +20,8 @@ data_file_name = os.path.join(
 with open(data_file_name, 'rb') as f:
     sol_search = pickle.load(f)
 
+# plt.rc('font', size=15)
+
 alphas = list(range(20, 7, -1))
 gammas = [0.13, 0.14, 0.15, 0.17, 0.19]
 
@@ -46,9 +48,9 @@ for gamma in gammas:
     if len(pairs) > 0:
         plt.plot(*zip(*pairs), '.-', label=f'$\\gamma={gamma:.2f}$')
 
-plt.xlabel(r'$\tau_q$')
-plt.ylabel(r'$c$')
-plt.title('$c$ by $\\tau_q$')
+plt.xlabel(r'Synaptic Timescale ($\tau_q$)')
+plt.ylabel(r'Pulse Speed ($c$)')
+plt.title('Synaptic Timescale vs. Speed')
 # plt.title('Pulse Speed')
 plt.legend(loc='top left')
 plt.tight_layout()
@@ -65,9 +67,9 @@ for gamma in gammas:
     if len(pairs) > 0:
         plt.plot(*zip(*pairs), '.-', label=f'$\\gamma={gamma:.2f}$')
 
-plt.xlabel(r'$\tau_q$')
-plt.ylabel(r'$\Delta$')
-plt.title('$\\Delta$ by  $\\tau_q$')
+plt.xlabel(r'Synaptic Timescale ($\tau_q$)')
+plt.ylabel(r'Pulse Width ($\Delta$)')
+plt.title('Synaptic Timescale vs. Pulse Width')
 plt.legend()
 plt.tight_layout()
 IMAGE_FILE_NAME = os.path.join(

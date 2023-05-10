@@ -57,7 +57,7 @@ solver = TqdmWrapper(Euler())
 fig, ax = plt.subplots(1, 1, figsize=(5, 3))
 ax.set_ylim(-.1, 1.1)
 u_line, = ax.plot(space.array, u0[0], 'b-', linewidth=5)
-q_line, = ax.plot(space.array, u0[1], 'b--', label='synaptic efficacy')
+# q_line, = ax.plot(space.array, u0[1], 'b--', label='synaptic efficacy')
 steps_per_frame = 350
 window_width = 10
 with imageio.get_writer(FILE_NAME, mode='I') as writer:
@@ -65,10 +65,11 @@ with imageio.get_writer(FILE_NAME, mode='I') as writer:
         if index % steps_per_frame != 0:
             continue
         u_line.set_ydata(u)
-        q_line.set_ydata(q)
+        # q_line.set_ydata(q)
         plt.savefig(FILE_NAME + '.png')
         image = imageio.imread(FILE_NAME + '.png')
         writer.append_data(image)
         plt.pause(0.001)
 
+os.remove(FILE_NAME + '.png')
 plt.close()

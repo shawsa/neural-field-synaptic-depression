@@ -83,8 +83,7 @@ for gamma, color in zip(gammas, colors):
         plt.fill_between(alphas[mask],
                          speeds2[mask],
                          speeds[mask],
-                         color='grey',
-                         label='$\\gamma < \\theta$')
+                         color='grey')# ,label='$\\gamma < \\theta$')
     if gamma == theta or gamma >= 2*theta:
         plt.plot(alphas, speeds, '-', color=color, label=f'$\\gamma={gamma}$')
         plt.plot(alphas, speeds2, ':', color=color)
@@ -97,15 +96,18 @@ for gamma, color in zip(gammas, colors):
                  '--', color=color)
 
 plt.plot(alpha_crit_arr[0], 0, 'k*')
-plt.plot(alpha_crit_arr, speed_crit_arr, 'k-', label='bifurcation')
+plt.plot(alpha_crit_arr, speed_crit_arr, 'k-')# , label='bifurcation')
 plt.text(10, 1, 'Pulse Regime', color='w')
+plt.text(1, 3, 'stable')
+plt.text(2, .05, 'unstable')
+plt.text(1, -1, 'regressive')
 # plt.title('$c$ vs. $\\tau_q$')
-plt.plot([], [], 'k-', label='Stable')
-plt.plot([], [], 'k:', label='Unstable')
-plt.plot([], [], 'k--', label='Regressive')
+# plt.plot([], [], 'k-', label='Stable')
+# plt.plot([], [], 'k:', label='Unstable')
+# plt.plot([], [], 'k--', label='Regressive')
 plt.title('Front Bifurcation')
-plt.xlabel('$\\tau_q$')
-plt.ylabel('$c$')
+plt.xlabel('synaptic efficacy timescale ($\\tau_q$)')
+plt.ylabel('speed')
 plt.xlim(0, 20)
 plt.ylim(-2, 4.5)
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))

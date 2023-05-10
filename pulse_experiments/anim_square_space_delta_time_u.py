@@ -6,85 +6,112 @@ most of the functionality.
 
 import experiment_defaults
 
+import imageio
+import matplotlib.pyplot as plt
 import numpy as np
 import os.path
+
 from helper_symbolics import get_traveling_pulse, get_numerical_parameters
 from functools import partial
-from neural_field import (NeuralField,
-                          ParametersBeta,
-                          heaviside_firing_rate,
-                          exponential_weight_kernel)
-from plotting_helpers import make_animation
-from space_domain import SpaceDomain
+from neural_field import NeuralField, ParametersBeta, heaviside_firing_rate, exponential_weight_kernel
+from num_assist import Domain, find_delta, find_c, pulse_profile, nullspace_amplitudes, v1, v2, local_interp
+from root_finding_helpers import find_roots
+from space_domain import SpaceDomain, BufferedSpaceDomain
 from time_domain import TimeDomain, TimeDomain_Start_Stop_MaxSpacing
 from time_integrator import Euler, EulerDelta
 from time_integrator_tqdm import TqdmWrapper
 
+FILE_NAME = os.path.join(experiment_defaults.media_path,
+                         'square_space_delta_time_u.gif')
+
+params = ParametersBeta(**{
+    'alpha': 20.0,
+    'beta': 5.0,
+    'mu': 1.0,
+})
+params_dict = {
+        **params.dict,
+        'gamma': params.gamma,
+        'theta': 0.2,
+        'weight_kernel': exponential_weight_kernel
+}
+theta = params_dict['theta']
+xs_right = Domain(0, 200, 8001)
+xs_left = Domain(-200, 0, 8001)
+
+"""Finding the speed and pulse width can be slow. Saving them for a given
+parameter set helps for rappid testing."""
+USE_SAVED_VALUES = True
+if USE_SAVED_VALUES:
+    c, Delta = 1.0509375967740198, 9.553535461425781
+    print(f'c={c}\nDelta={Delta}')
+else:
+    Delta_interval = (7, 20)
+    speed_interval = (1, 10)
+    Delta = find_delta(*Delta_interval, *speed_interval,
+                       xs_left, xs_right, verbose=True, **params)
+    c = find_c(*speed_interval,  xs_right,
+               Delta=Delta, verbose=True, **params)
+
+params_dict['c'] = c
+params_dict['Delta'] = Delta
+
+xis, Us, Qs = pulse_profile(xs_right=xs_right, xs_left=xs_left, **params_dict)
+
+space = BufferedSpaceDomain(-100, 200, 10**4, 0.1)
+time = TimeDomain_Start_Stop_MaxSpacing(0, 20, 2e-2)
+
+initial_offset = 0
+initial = np.empty((2, space.num_points))
+initial[0] = np.array([local_interp(x, xis, Us) for x in space.array])
+initial[1] = np.array([local_interp(x, xis, Qs) for x in space.array])
 
 
-def main():
+stim_center = 8
+stim_width = 1
+delta_time = 5
+epsilon = 0.2
+stim_profile = np.zeros_like(initial)
+stim_profile[0] = (np.heaviside(space.array - (stim_center - stim_width/2), 0.5) *
+                   np.heaviside(-space.array + (stim_center + stim_width/2), 0.5))
 
-    file_name = os.path.join(experiment_defaults.media_path,
-                             'square_space_delta_time_u.mp4')
+model = NeuralField(space=space,
+                    firing_rate=partial(heaviside_firing_rate,
+                                        theta=theta),
+                    weight_kernel=exponential_weight_kernel,
+                    params=params)
 
-    params = ParametersBeta(mu=1.0, alpha=20.0, beta=4.0)
-    theta = 0.2
+solver0 = TqdmWrapper(EulerDelta(delta_time, epsilon*stim_profile))
+solver1 = TqdmWrapper(Euler())
 
-    # space = SpaceDomain(-100, 200, 10**4)
-    # time = TimeDomain_Start_Stop_MaxSpacing(0, 18, 1e-3/5)
-    space = SpaceDomain(-100, 200, 10**3)
-    time = TimeDomain_Start_Stop_MaxSpacing(0, 18, 1e-2)
+plt.rc('font', size=15)
+plt.rc('lines', linewidth=5)
 
+fig, ax = plt.subplots(1, 1, figsize=(5, 4))
+line_u0, = ax.plot(space.array, initial[0], 'g-')
+line_q0, = ax.plot(space.array, initial[1], 'g--')
+line_u1, = ax.plot(space.array, initial[0], 'b-')
+line_q1, = ax.plot(space.array, initial[1], 'b--')
 
+ax.set_xlim(-20, 40)
+ax.set_xlabel('$x$')
+plt.tight_layout()
+FRAME_SKIP = 10
+with imageio.get_writer(FILE_NAME, mode='I') as writer:
+    for index, (t, (u0, q0), (u1, q1)) in enumerate(
+            zip(time.array,
+                solver0.solution_generator(initial, model.rhs, time),
+                solver1.solution_generator(initial, model.rhs, time))):
+        if index % FRAME_SKIP != 0 and (t < 4.5 or t > 7.5):
+            continue
+        line_u0.set_ydata(u0)
+        line_q0.set_ydata(q0)
+        line_u1.set_ydata(u1)
+        line_q1.set_ydata(q1)
 
-    U_num, Q_num, *_ = get_traveling_pulse({'theta': theta, **params.dict})
+        plt.savefig(FILE_NAME + '.png')
+        image = imageio.imread(FILE_NAME + '.png')
+        writer.append_data(image)
+        plt.pause(0.001)
 
-    num_params = get_numerical_parameters({'theta': 0.2, **params.dict})
-    print(num_params)
-
-    initial_offset = 0
-    u0 = np.empty((2, space.num_points))
-    u0[0] = U_num(space.array+initial_offset)
-    u0[1] = Q_num(space.array+initial_offset)
-
-    model = NeuralField(space=space,
-                        firing_rate=partial(heaviside_firing_rate,
-                                            theta=theta),
-                        weight_kernel=exponential_weight_kernel,
-                        params=params)
-
-    stim_center = 0
-    stim_width = 5
-    delta_time = 1
-    epsilon = 0.2
-    stim_profile = np.zeros_like(u0)
-    stim_profile[0] = (np.heaviside(space.array - (stim_center - stim_width/2), 0.5) *
-                       np.heaviside(-space.array + (stim_center + stim_width/2), 0.5))
-
-    solver = TqdmWrapper(EulerDelta(delta_time, epsilon*stim_profile))
-
-    print('solving purturbed case')
-    us = solver.solve(u0, model.rhs, time)
-
-    # unperturbed
-    print('solving unpurturbed case')
-    unperturbed_solver = TqdmWrapper(Euler())
-    us_unperturbed = unperturbed_solver.solve(u0, model.rhs, time)
-
-
-    print('animating...')
-
-    make_animation(file_name,
-                   time.array,
-                   space.array,
-                   [us, us_unperturbed],
-                   us_labels=('perturbed', 'unperturbed'),
-                   theta=theta,
-                   x_window=(-15, 20),
-                   frames=100,
-                   fps=12,
-                   animation_interval=400)
-
-
-if __name__ == '__main__':
-    main()
+os.remove(FILE_NAME + '.png')
