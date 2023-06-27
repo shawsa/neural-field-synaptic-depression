@@ -16,7 +16,7 @@ from itertools import product
 
 import warnings
 
-FILE = os.path.join(
+DATA_FILE = os.path.join(
     experiment_defaults.data_path,
     'smooth_bifurcation.pickle')
 
@@ -220,7 +220,7 @@ class SolutionSearch:
 if __name__ == "__main__":
     if True:
         """For REPL loading of extant data."""
-        with open(FILE , 'rb') as f:
+        with open(DATA_FILE , 'rb') as f:
             alphas, gammas, stable_search, unstable_search = pickle.load(f)
 
     default_params = { "mu": 1.0,
@@ -339,19 +339,23 @@ if __name__ == "__main__":
     plt.plot(*zip(*[(sol.alpha, sol.gamma) for sol in unstable_search]), 'g.')
     plt.plot(*zip(*[(sol.alpha, sol.gamma) for sol in failed_unstable_seeks]), 'mx')
 
-    with open(FILE, 'wb') as f:
+    with open(DATA_FILE, 'wb') as f:
         pickle.dump((alphas, gammas, stable_search, unstable_search), f)
 
     if False:
-        targets = [sol.args for sol in tqdm(unstable_search.solutions)
-                   if any(sol.args.dist(sol2.args) < 1e-12 for sol2 in stable_search.solutions)]
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            for target in tqdm(targets):
-                try:
-                    stable_search.seek(target, step_size=step_size, max_refinements=refinements)
-                except la.LinAlgError:
-                    continue
-                except MaxRefinementReachedException:
-                    continue
+            for gamma in tqdm(plot_gammas, position=0, leave=True):
+                for alpha in tqdm(alphas, position=1):
+                    step_size = 1e-2
+                    refinements = 4
+                    beta = round(1/gamma-1, 10)
+                    target = Arguments(**{**default_params, 'alpha': alpha, 'beta': beta})
+                    try:
+                        sol = unstable_search.seek(target, step_size=step_size, max_refinements=refinements)
+                        plt.plot(sol.alpha, sol.gamma, 'kv')
+                    except la.LinAlgError:
+                        continue
+                    except MaxRefinementReachedException:
+                        continue
+
