@@ -256,8 +256,11 @@ def pulse_profile(xs_left: Domain,
                                theta=theta,
                                weight_kernel=weight_kernel)
     if vanish_tol is not None:
-        vanish_index = max(i for i in range(len(Us_right)) if abs(Us_right[i]) < vanish_tol)
-        Us_right[vanish_index:] = 0
+        try:
+            vanish_index = max(i for i in range(len(Us_right)) if abs(Us_right[i]) < vanish_tol)
+            Us_right[vanish_index:] = 0
+        except:
+            pass
     Us = np.hstack((Us_left[:-1], Us_right))
     Qs = Q_profile(xs, alpha, gamma, c, Delta)
     return xs, Us, Qs

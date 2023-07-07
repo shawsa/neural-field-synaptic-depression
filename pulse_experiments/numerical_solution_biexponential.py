@@ -15,10 +15,6 @@ NULLSPACE_FILE_NAME = os.path.join(
         experiment_defaults.media_path,
         'bi-exponential nullspace (numerical)')
 
-PULSE_FILE_NAME = os.path.join(
-        experiment_defaults.media_path,
-        'bi-exponential pulse (numerical)')
-
 def weight_kernel(x):
     return .5*np.exp(-np.abs(x))
 
@@ -37,7 +33,15 @@ xs_left = Domain(-200, 0, 8001)
 parameter set helps for rappid testing."""
 USE_SAVED_VALUES = True
 if USE_SAVED_VALUES:
-    c, Delta = 1.0509375967740198, 9.553535461425781
+    stable solution
+    c, Delta = 1.0300285382703893, 9.34228165786195
+
+    # unstable solution -- doesn't work right
+    # c, Delta = 0.2282045781557908, 1.7456243859964509
+    # PULSE_FILE_NAME = os.path.join(
+    #         experiment_defaults.media_path,
+    #         'bi-exponential pulse (numerical) (unstable)')
+
     print(f'c={c}\nDelta={Delta}')
 else:
     Delta_interval = (7, 20)
@@ -54,22 +58,7 @@ custom = {
     'linewidth': 2.0
 }
 
-xs, Us, Qs = pulse_profile(xs_left=xs_left, xs_right=xs_right, **params)
-plt.figure('Traveling wave.', figsize=(5, 3))
-plt.plot(xs, Us, 'b-', label='$U$', **custom)
-plt.plot(xs, Qs, 'b--', label='$Q$', **custom)
-# plt.plot([-Delta, 0], [params['theta']]*2, 'k.')
-plt.plot(xs, params['theta']+0*xs, 'k:', label='$\\theta$', **custom)
-plt.plot([-Delta, 0], [0]*2, color='gray', linewidth=5.0, label='Active Region')
-plt.xlim(-30, 20)
-plt.xlabel('$\\xi$')
-plt.legend(loc='upper left')
-plt.title('Traveling Pulse Profile')
-plt.tight_layout()
-for extension in ['.png', '.eps']:
-    plt.savefig(PULSE_FILE_NAME + extension)
-plt.show()
-
+xs, Us, Qs = pulse_profile(xs_left=xs_left, xs_right=xs_right, **params, vanish_tol=1e-3)
 
 A0, AmD = nullspace_amplitudes(xs, Us, Qs, **params)
 print(f'A_0={A0}\tA_{{-Delta}}={AmD}')
@@ -86,6 +75,6 @@ plt.xlim(-15, 15)
 plt.ylim(-2e-3, 1e-2)
 plt.title('bi-exponential nullspace (numerical)')
 plt.legend()
-for extension in ['.png', '.eps']:
+for extension in ['.png', '.eps', '.pdf']:
     plt.savefig(NULLSPACE_FILE_NAME + extension)
 plt.show()

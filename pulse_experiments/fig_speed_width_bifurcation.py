@@ -77,7 +77,7 @@ for gamma, color in zip(plot_gammas, cycle(gamma_colors)):
              color=color)
 plt.xlabel(r'$\tau_q$')
 plt.ylabel('speed')
-plt.xlim(10, 20)
+plt.xlim(min(sol. alpha for sol in stable_search), 20)
 plt.ylim(0.1, 1.2)
 plt.title('Pulse speed vs $\\tau_q$')
 plt.legend(loc='upper left')
@@ -118,7 +118,7 @@ for gamma, color in zip(plot_gammas, cycle(gamma_colors)):
              color=color)
 plt.xlabel(r'$\tau_q$')
 plt.ylabel('width')
-plt.xlim(10, 20)
+plt.xlim(min(sol. alpha for sol in stable_search), 20)
 plt.ylim(0, 14)
 plt.title('Pulse width vs $\\tau_q$')
 plt.legend()
@@ -157,7 +157,7 @@ plt.title('Pulse speed vs $\\gamma$')
 plt.legend(loc='upper left')
 plt.colorbar(matplotlib.cm.ScalarMappable(norm=alpha_color_norm, cmap=cmap),
              label='$\\tau_q$')
-for ext in ['png', 'eps', 'pdf']:
+fsor ext in ['png', 'eps', 'pdf']:
     plt.savefig(os.path.join(experiment_defaults.media_path,
                              SPEED_BY_GAMMA_FILE_NAME) + '.' + ext)
 plt.show()
@@ -235,8 +235,8 @@ if False:
         refinements = 10
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            for gamma in tqdm([.135, .145], position=0, leave=True):
-            # for gamma in tqdm(plot_gammas, position=0, leave=True):
+            # for gamma in tqdm([.135, .145], position=0, leave=True):
+            for gamma in tqdm(plot_gammas, position=0, leave=True):
                 alpha_min = min(sol.alpha for sol in searcher
                                 if abs(sol.gamma - gamma) < 1e-10)
                 alpha_min = alphas[np.argmin(np.abs([alpha-alpha_min for alpha in alphas]))]
