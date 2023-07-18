@@ -157,7 +157,7 @@ plt.title('Pulse speed vs $\\gamma$')
 plt.legend(loc='upper left')
 plt.colorbar(matplotlib.cm.ScalarMappable(norm=alpha_color_norm, cmap=cmap),
              label='$\\tau_q$')
-fsor ext in ['png', 'eps', 'pdf']:
+for ext in ['png', 'eps', 'pdf']:
     plt.savefig(os.path.join(experiment_defaults.media_path,
                              SPEED_BY_GAMMA_FILE_NAME) + '.' + ext)
 plt.show()
