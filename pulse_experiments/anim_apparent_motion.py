@@ -12,8 +12,22 @@ import numpy as np
 import os.path
 from functools import partial
 from itertools import islice
-from neural_field import NeuralField, ParametersBeta, heaviside_firing_rate, exponential_weight_kernel
-from num_assist import Domain, find_delta, find_c, pulse_profile, nullspace_amplitudes, v1, v2, local_interp
+from neural_field import (
+        NeuralField,
+        ParametersBeta,
+        heaviside_firing_rate,
+        exponential_weight_kernel,
+)
+from num_assist import (
+        Domain,
+        find_delta,
+        find_c,
+        pulse_profile,
+        nullspace_amplitudes,
+        v1,
+        v2,
+        local_interp,
+)
 from plotting_helpers import make_animation
 from root_finding_helpers import find_roots
 from space_domain import SpaceDomain, BufferedSpaceDomain

@@ -13,8 +13,18 @@ import os.path
 
 from helper_symbolics import get_traveling_pulse, get_numerical_parameters
 from functools import partial
-from neural_field import NeuralField, ParametersBeta, heaviside_firing_rate, exponential_weight_kernel
-from num_assist import Domain, find_delta, find_c, pulse_profile, nullspace_amplitudes, v1, v2, local_interp
+from neural_field import (NeuralField,
+                          ParametersBeta,
+                          heaviside_firing_rate,
+                          exponential_weight_kernel)
+from num_assist import (Domain,
+                        find_delta,
+                        find_c,
+                        pulse_profile,
+                        nullspace_amplitudes,
+                        v1,
+                        v2,
+                        local_interp)
 from root_finding_helpers import find_roots
 from space_domain import SpaceDomain, BufferedSpaceDomain
 from time_domain import TimeDomain, TimeDomain_Start_Stop_MaxSpacing
