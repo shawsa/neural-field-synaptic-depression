@@ -229,6 +229,24 @@ def get_adjoint_nullspace(input_params, precision=15, validate=True):
     v2 = sym.lambdify(xi, recursive_reduce(expr_dict['v2']).evalf(precision, subs=params), modules=sympy_modules)
     return v1, v2
 
+def symbolic_dictionary(**args):
+    var_str_list = ['mu' ,'alpha', 'beta', 'theta', 'c', 'Delta']
+    old_params_dict = {key: value
+                       for key, value in args.items()
+                       if key in var_str_list}
+    # convert to the new definition of beta
+    old_params_dict['beta'] /= old_params_dict['alpha']
+
+    symbol_set = free_symbols_in([
+            recursive_reduce(expr)
+            for expr in expr_dict['speed_width_conditions']
+    ])
+
+    symbol_params = {find_symbol_by_string(symbol_set, key): value
+                     for key, value in old_params_dict.items()}
+
+    return symbol_params
+
 
 if __name__ == '__main__':
     import os

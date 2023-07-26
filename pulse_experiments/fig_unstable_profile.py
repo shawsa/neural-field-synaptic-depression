@@ -13,7 +13,7 @@ from helper_symbolics import (
         find_symbol_by_string,
         free_symbols_in,
         expr_dict,
-        get_traveling_pulse,
+        get_traveling_pulse)
 
 PULSE_FILE_NAME = os.path.join(
         experiment_defaults.media_path,

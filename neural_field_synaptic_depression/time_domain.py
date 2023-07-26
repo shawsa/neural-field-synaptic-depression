@@ -31,3 +31,40 @@ class TimeDomain_Start_Stop_Steps(TimeDomain):
         self.spacing = (stop - start)/steps
         self.initialze_array()
 
+
+class Ray:
+    def __init__(self, start, step):
+        self.start = start
+        self.step = step
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self.start + key*self.step
+        if not isinstance(key, slice):
+            raise ValueError
+        start = key.start or 0
+        step = key.step or 1
+        return Ray(self[start], self.step*step)
+
+    def __iter__(self):
+        index = 0
+        while True:
+            yield self.start + index*self.step
+            index += 1
+
+
+    def __repr__(self):
+        return f'Ray(start={self.start}, step={self.step})'
+
+class TimeRay(TimeDomain):
+
+    def __init__(self, start, spacing):
+        self.start = start
+        self.spacing = spacing
+
+    @property
+    def array(self):
+        return Ray(self.start, self.spacing)
+
+    def __iter__(self):
+        return self.array.__iter__()
