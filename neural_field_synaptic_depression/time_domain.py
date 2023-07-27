@@ -15,6 +15,9 @@ class TimeDomain:
     def initialze_array(self):
         self.array = self.start + self.spacing*np.arange(self.steps+1)
 
+    def __iter__(self):
+        yield from self.array
+
 class TimeDomain_Start_Stop_MaxSpacing(TimeDomain):
 
     def __init__(self, start, stop, max_spacing):

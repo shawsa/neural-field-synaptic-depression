@@ -63,3 +63,16 @@ def generate_stimulus(*, t_on, t_off, c, delta_c, stim_start, stim_width, stim_m
                        np.heaviside(t_on - t_mapped, 1) * stim_mag)
         return stim_vec
     return stim
+
+def generate_period_time(*, t_on, t_off, c, delta_c, stim_start, stim_width, stim_mag):
+    period = t_on + t_off
+    def period_time(t):
+        return t - np.floor(t/period)*period
+    return period_time
+
+def generate_stim_front(*, t_on, t_off, c, delta_c, stim_start, stim_width, stim_mag):
+    period = t_on + t_off
+    stim_speed = c + delta_c
+    def stim_front(t):
+        return stim_start + np.floor(t/period)*period*stim_speed
+    return stim_front

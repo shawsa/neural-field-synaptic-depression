@@ -1,8 +1,3 @@
-#!/usr/bin/python3
-'''
-A driver for the neural field simulator. Consider this a manual test of
-most of the functionality.
-'''
 
 import experiment_defaults
 
@@ -10,33 +5,37 @@ import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 import os.path
+
 from functools import partial
 from itertools import islice
+
 from neural_field import (
         NeuralField,
         ParametersBeta,
         heaviside_firing_rate,
         exponential_weight_kernel,
 )
-from num_assist import (
-        Domain,
-        find_delta,
-        find_c,
-        pulse_profile,
-        nullspace_amplitudes,
-        v1,
-        v2,
-        local_interp,
-)
-from plotting_helpers import make_animation
-from root_finding_helpers import find_roots
-from space_domain import SpaceDomain, BufferedSpaceDomain
-from time_domain import TimeDomain, TimeDomain_Start_Stop_MaxSpacing
-from time_integrator import Euler, EulerDelta
-from time_integrator_tqdm import TqdmWrapper
 
-from scipy.stats import linregress
-from more_itertools import windowed
+from helper_symbolics import (
+        expr_dict,
+        find_symbol_by_string,
+        free_symbols_in,
+        get_traveling_pulse,
+        recursive_reduce,
+        symbolic_dictionary,
+)
+
+from root_finding_helpers import find_roots
+
+from time_domain import TimeRay, TimeDomain_Start_Stop_MaxSpacing
+
+from apparent_motion_utils import (
+        ShiftingDomain,
+        ShiftingEuler,
+        generate_stimulus,
+        generate_stim_front,
+        generate_period_time,
+)
 
 FILE_NAME = os.path.join(experiment_defaults.media_path,
                          'apparent_motion.gif')
@@ -46,17 +45,8 @@ params = ParametersBeta(**{
     'beta': 5.0,
     'mu': 1.0,
 })
-params_dict = {
-        **params.dict,
-        'gamma': params.gamma,
-        'theta': 0.2,
-        'weight_kernel': exponential_weight_kernel
-}
-xs_right = Domain(0, 200, 8001)
-xs_left = Domain(-200, 0, 8001)
+theta = 0.2
 
-"""Finding the speed and pulse width can be slow. Saving them for a given
-parameter set helps for rappid testing."""
 USE_SAVED_VALUES = True
 if USE_SAVED_VALUES:
     c, Delta = 1.0509375967740198, 9.553535461425781
@@ -69,99 +59,140 @@ else:
     c = find_c(*speed_interval,  xs_right,
                Delta=Delta, verbose=True, **params)
 
-params_dict['c'] = c
-params_dict['Delta'] = Delta
+symbol_params = symbolic_dictionary(c=c, Delta=Delta, theta=theta, **params.dict)
+U, Q, *_ = get_traveling_pulse(symbol_params, validate=False)
 
-xis, Us, Qs = pulse_profile(xs_right=xs_right, xs_left=xs_left, **params_dict)
 
-space = BufferedSpaceDomain(-100, 200, 10**4, 0.1)
-time = TimeDomain_Start_Stop_MaxSpacing(0, 20, 1e-3)
-
-initial_offset = 0
-u0 = np.empty((2, space.num_points))
-u0[0] = np.array([local_interp(x, xis, Us) for x in space.array])
-u0[1] = np.array([local_interp(x, xis, Qs) for x in space.array])
+space = ShiftingDomain(-20, 40, 6_001)
+#time = TimeRay(0, 1e-2)
+time = TimeDomain_Start_Stop_MaxSpacing(0, 80, 1e-2)
 
 model = NeuralField(
-                space=space,
-                firing_rate=partial(heaviside_firing_rate,
-                                    theta=params_dict['theta']),
-                weight_kernel=exponential_weight_kernel,
-                params=params)
+            space=space,
+            firing_rate=partial(heaviside_firing_rate, theta=theta),
+            weight_kernel=exponential_weight_kernel,
+            params=params)
 
-solver = TqdmWrapper(Euler())
+solver = ShiftingEuler(shift_tol=1e-6, shift_fraction=2/3, space=space)
 
-# FILE_NAME = 'entrainment_square_entrainment'
-stim_speed = 2
-stim_start = -4
-stim_magnitude = 0.1
+u0 = np.empty((2, space.num_points))
+u0[0] = U(space.array)
+u0[1] = Q(space.array)
 
-freq = 0.5
-
-def time_apparent(t):
-    return np.floor(t*freq)/freq
-
-def stim_func(t):
-    t2 = time_apparent(t)
-    return stim_magnitude*np.exp(-np.abs(space.array - stim_start - stim_speed*t2)**2)
+# Stimulus
+stim_dict = {
+        't_on' : 0.5,
+        't_off' : 0.5,
+        'delta_c' : 0.25,
+        # 'delta_c' : 0.3,
+        'stim_mag' : 0.04,
+        # 'stim_mag' : 0.08,
+        'stim_width' : 5,
+        'stim_start' : -.05,
+        'c' : c
+}
+stim = generate_stimulus(**stim_dict)
+stim_front = generate_stim_front(**stim_dict)
+period_time = generate_period_time(**stim_dict)
 
 def rhs(t, u):
-    stim = np.zeros_like(u0)
-    stim[0] = stim_func(t)
-    return model.rhs(t, u) + stim
+    return model.rhs(t, u) + stim(space.array, t)
+          
 
+try:
+    plt.close()
+except:
+    pass
 
-fig, axes = plt.subplots(2, 1, figsize=(10, 10))
-u_line, = axes[0].plot(space.array, u0[0], 'b-', label='activity')
-q_line, = axes[0].plot(space.array, u0[1], 'b--', label='synaptic efficacy')
-stim_line, = axes[0].plot(space.array, stim_func(0), 'm:', label='stimulus')
-front_line, = axes[0].plot([0], [params_dict['theta']], 'k.')
-stim_speed_line, = axes[0].plot([stim_start], [params_dict['theta']], 'k.')
-axes[0].set_xlim(-20, 100)
-axes[0].set_xlabel('$x$')
-axes[0].legend(loc='upper left')
-axes[1].plot([], [], 'b.', label='front')
-axes[1].plot(time.array, stim_speed + 0*time.array, 'k-', label='stim')
-axes[1].plot(time.array, c + 0*time.array, 'b-', label='natural')
-             
-axes[1].set_ylabel('speed')
-axes[1].legend()
-axes[1].set_xlabel('time')
-fronts = []
-# steps_per_frame = 97
-steps_per_frame = 47
-window_width = 20
-with imageio.get_writer(FILE_NAME, mode='I') as writer:
-    for index, (t, (u, q)) in enumerate(zip(time.array, solver.solution_generator(u0, rhs, time))):
-        fronts.append(find_roots(space.inner, u[space.inner_slice]-params_dict['theta'], window=3)[-1])
-        if len(fronts) > window_width:
-            front_speed = linregress([time.spacing]*np.arange(window_width),
-                                     fronts[-window_width:]).slope
+fig = plt.figure(figsize=(10, 15))
+gs = fig.add_gridspec(2, 2)
+ax0 = fig.add_subplot(gs[0, :])
+ax1 = fig.add_subplot(gs[1, 0])
+ax2 = fig.add_subplot(gs[1, 1])
+theta_line, = ax0.plot([space.left, space.right], [theta]*2, 'k:')
+stim_line, = ax0.plot(space.array, stim(space.array, 0)[0], 'm-')
+u_line, = ax0.plot(space.array, u0[0], 'b-')
+q_line, = ax0.plot(space.array, u0[1], 'b--')
 
-        if index % steps_per_frame == 0:
-            front_line.set_xdata([fronts[-1]])
-            if len(fronts) > window_width:
-                axes[1].plot(t, front_speed, 'b.', label='front')
-            u_line.set_ydata(u)
-            q_line.set_ydata(q)
-            stim_line.set_ydata(stim_func(t))
-            stim_speed_line.set_xdata([stim_speed*t + stim_start])
-            plt.savefig(FILE_NAME + '.png')
-            image = imageio.imread(FILE_NAME + '.png')
-            writer.append_data(image)
-            plt.pause(0.001)
+num_ticks = 6
+def plot_callback():
+    ax0.set_xlim(space.left, space.right)
+    ticks = space.array[::space.num_points//num_ticks]
+    ax0.set_xticks(ticks, [f'{tick:.2f}' for tick in ticks])
+    u_line.set_xdata(space.array)
+    q_line.set_xdata(space.array)
+    stim_line.set_xdata(space.array)
+    theta_line.set_xdata([space.left, space.right])
 
-# plt.savefig('media/entrainment_test.png')
+space.callback = plot_callback
+space.reset()
+times, fronts  = map(list, zip(*[(i*time.spacing, i*time.spacing*c)
+                            for i in range(-199,1,1)]))
 
-fronts = []
-for t, (u, q) in zip(time.array, solver.solution_generator(u0, rhs, time)):
-    fronts.append(find_roots(space.inner, u[space.inner_slice]-params_dict['theta'], window=3)[-1])
+time_width = time.spacing * len(times)
+front_natural_line, = ax1.plot([0, 0 - time_width],
+                               [0, 0 - c*time_width],
+                               'g-')
+front_stim_line, = ax1.plot([0, 0 - time_width],
+                            [0, 0 - (c+stim_dict['delta_c'])*time_width],
+                            'm-')
+front_line, = ax1.plot(times, fronts, 'b.')
+front_window_width = abs(fronts[-1] - fronts[0])
+front_window_height = abs(times[-1] - times[0])
+ax1.set_xlim(times[-1]- front_window_height, times[-1])
+ax1.set_ylim(fronts[-1]- front_window_width, fronts[-1])
 
-plt.figure('Entrainment?')
-plt.plot(time.array, fronts, 'b.', label='front')
-plt.plot(time.array, c*time.array, 'b-', label='expected front')
-plt.plot(time.array, stim_speed*time.array + stim_start, 'r-', label='stim')
-plt.legend()
-plt.title(f'Sim magintude={stim_magnitude}\nStim speed={stim_speed}')
+relative_front_sample_len = int((stim_dict['t_on'] + stim_dict['t_off'])/time.spacing * 5)
+relative_fronts = [0] * relative_front_sample_len
+relative_times = [period_time(i*time.spacing)
+                  for i in range(1-relative_front_sample_len, 1, 1)]
+ax2.plot([stim_dict['t_on']]*2, [-1000, 1000], 'g:')
+relative_line, = ax2.plot(relative_times, relative_fronts, 'k.')
+relative_lead_line, = ax2.plot(0, 0, 'r.')
+ax2.set_xlim(0, stim_dict['t_on'] + stim_dict['t_off'])
+ax2.set_ylim(-0.5, 0.5)
+
+ax0.set_xlabel('$x$')
+ax1.set_xlabel('$t$')
+ax1.set_ylabel('$x$')
+
+ax2.set_xlabel('$t$ (relative to period)')
+ax2.set_ylabel('Front lag')
+
 plt.tight_layout()
-# plt.savefig(os.path.join(experiment_defaults.media_path, FILE_NAME + '.png'))
+
+sample_freq = 21
+with imageio.get_writer(FILE_NAME, mode='I') as writer:
+    for index, (t, (u, q)) in enumerate(zip(
+                                time,
+                                solver.solution_generator(u0, rhs, time))):
+        front = find_roots(space.array, u-theta, window=3)[-1]
+        rolling_index = index % len(fronts)
+        fronts[rolling_index] = front
+        times[rolling_index] = t
+        relative_rolling_index = index % relative_front_sample_len
+        relative_fronts[relative_rolling_index] = front - stim_front(t)
+        relative_times[relative_rolling_index] = period_time(t)
+        if index % sample_freq != 0:
+            continue
+        u_line.set_ydata(u)
+        q_line.set_ydata(q)
+        stim_line.set_ydata(stim(space.array, t)[0])
+        front_line.set_data(times, fronts)
+        front_natural_line.set_data([t, t - time_width],
+                                    [front, front - c*time_width])
+        front_stim_line.set_data([t, t - time_width],
+                                 [front, front - (c+stim_dict['delta_c'])*time_width])
+        ax1.set_xlim(times[rolling_index] - front_window_height, times[rolling_index])
+        ax1.set_ylim(fronts[rolling_index] - front_window_width, fronts[rolling_index])
+        relative_line.set_data(relative_times, relative_fronts)
+        relative_lead_line.set_data(relative_times[relative_rolling_index],
+                                    relative_fronts[relative_rolling_index])
+        ax2.set_ylim(min(relative_fronts), max(relative_fronts))
+        plt.savefig(FILE_NAME + '.png')
+        image = imageio.imread(FILE_NAME + '.png')
+        os.remove(FILE_NAME + '.png')
+        writer.append_data(image)
+        plt.pause(1e-3)
+        if np.max(u) < theta:
+            break
