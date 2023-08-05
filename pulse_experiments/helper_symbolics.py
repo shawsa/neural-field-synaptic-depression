@@ -28,7 +28,7 @@ import sympy as sym
 from newton import NewtonRootFind
 
 # Heaviside numerics workaround
-sympy_modules = [{'Heaviside': lambda x: np.heaviside(x, 0.5)}, 'numpy']
+sympy_modules = [{'Heaviside': lambda x, y0: np.heaviside(x, y0)}, 'numpy']
 
 
 # FILE_PATH = 'synaptic_depression_symbolics.pickle'

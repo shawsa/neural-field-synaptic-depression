@@ -1,9 +1,18 @@
 
 import experiment_defaults
+
+import imageio.v2 as imageio
 import matplotlib.pyplot as plt
 import numpy as np
+import os.path
+import pickle
+
+from pqdm.processes import pqdm
+from tqdm import tqdm
+
+from collections import deque
 from functools import partial
-from itertools import islice
+from itertools import product
 
 from neural_field import (
         NeuralField,
@@ -17,97 +26,209 @@ from helper_symbolics import (
         find_symbol_by_string,
         free_symbols_in,
         get_traveling_pulse,
+        get_adjoint_nullspace,
+        get_numerical_parameters,
         recursive_reduce,
         symbolic_dictionary,
 )
 
-from time_domain import TimeRay
+from num_assist import Domain # for quadrature
+
+from root_finding_helpers import find_roots
+
+from time_domain import TimeRay, TimeDomain_Start_Stop_MaxSpacing
 
 from apparent_motion_utils import (
         ShiftingDomain,
         ShiftingEuler,
-        generate_stimulus,
+        ApparentMotionStimulus,
 )
 
-default = ParametersBeta(**{
+EXPERIMENT_NO = 2
+match EXPERIMENT_NO:
+    case 0:
+        EXPERIMENT_NAME = '50_50'
+        stim_args = {
+                't_on': 0.5,
+                't_off': 0.5,
+                'width': 10,
+                'start': -.05,
+        }
+        stim_mags = np.linspace(0, 0.2, 21)[1:]
+        stim_speed_deltas = np.linspace(0, 1.5, 21)[1:]
+    case 1:
+        EXPERIMENT_NAME = 'mostly_on'
+        stim_args = {
+                't_on': 0.5,
+                't_off': 0.05,
+                'width': 10,
+                'start': -.05,
+        }
+        stim_mags = np.linspace(0, 0.2, 21)[1:]
+        stim_speed_deltas = np.linspace(0, 2.8, 21)[1:]
+    case 2:
+        EXPERIMENT_NAME = 'mostly_off'
+        stim_args = {
+                't_on': 0.1,
+                't_off': 0.5,
+                'width': 10,
+                'start': -.05,
+        }
+        stim_mags = np.linspace(0, 0.2, 21)[1:]
+        stim_speed_deltas = np.linspace(0, 0.5, 21)[1:]
+
+
+DATA_PATH = os.path.join(experiment_defaults.data_path,
+                         f'apparent_motion_mag_speed_{EXPERIMENT_NAME}.pickle')
+MEDIA_PATH = os.path.join(experiment_defaults.media_path,
+                         f'apparent_motion_mag_speed_{EXPERIMENT_NAME}')
+print(f'number of sims: {len(stim_mags)*len(stim_speed_deltas)}')
+
+params = ParametersBeta(**{
     'alpha': 20.0,
     'beta': 5.0,
     'mu': 1.0,
-    'theta': 0.2
 })
+theta = 0.2
 
 c, Delta = 1.0509375967740198, 9.553535461425781
-Delta_interval = (7, 20)
-speed_interval = (1, 10)
-Delta = find_delta(*Delta_interval, *speed_interval,
-                   xs_left, xs_right, verbose=True, **params)
-c = find_c(*speed_interval,  xs_right,
-           Delta=Delta, verbose=True, **params)
 
 symbol_params = symbolic_dictionary(c=c, Delta=Delta, theta=theta, **params.dict)
-U, Q, *_ = get_traveling_pulse(symbol_params, validate=False)
+symbol_params = get_numerical_parameters(symbol_params, validate=False)
+U, Q, U_prime, Q_prime = get_traveling_pulse(symbol_params, validate=False)
+v1, v2 = get_adjoint_nullspace(symbol_params, validate=False)
+# find D from asymptotic approximation
+dom = Domain(-30, 30, 2001)
+D = -dom.quad(params.mu*U_prime(dom.array)*v1(dom.array) + 
+              params.alpha*Q_prime(dom.array)*v2(dom.array))
 
 
-space = ShiftingDomain(-20, 40, 6_001)
-time = TimeRay(0, 1e-2)
-
+space = ShiftingDomain(-25, 30, 6_001)
 model = NeuralField(
             space=space,
             firing_rate=partial(heaviside_firing_rate, theta=theta),
             weight_kernel=exponential_weight_kernel,
             params=params)
 
-solver = ShiftingEuler(shift_tol=1e-6, shift_fraction=2/3, space=space)
+solver = ShiftingEuler(shift_tol=1e-3, shift_fraction=4/5, space=space)
 
 u0 = np.empty((2, space.num_points))
 u0[0] = U(space.array)
 u0[1] = Q(space.array)
 
-# Stimulus
-stim = generate_stimulus(
-        t_on = .5,
-        t_off = 0.5,
-        delta_c = 0.25,
-        stim_mag = 0.04,
-        stim_width = 5,
-        stim_start = -.05,
-        c = c
-)
 
-def rhs(t, u):
-    return model.rhs(t, u) + stim(space.array, t)
-          
+if False:
+    my_time = TimeDomain_Start_Stop_MaxSpacing(0, 300, 1e-3)
+    space.reset()
+    for u, q in tqdm(solver.solution_generator(u0, model.rhs, my_time),
+                     total=len(my_time.array)):
+        pass
+    front = find_roots(space.array, u-theta, window=3)[-1]
+    sim_speed = front / my_time.array[-1]
+else:
+    sim_speed = 1.0294047249587208
+print(f'{sim_speed=}')
 
-try:
-    plt.close()
-except:
-    pass
+
+stim = ApparentMotionStimulus(**stim_args, speed=sim_speed, mag=0)
+slope = 1 / (stim.t_on/stim.period*c*params.mu/D)
+
+# def tighter_bound_slope(eps):
+#     r = c*params.mu
+#     b1 = c*eps*params.mu/D
+#     a = c + b1
+#     return -c*params.mu/stim.period * np.log(b1/a*np.exp(-r*stim.width) *
+#             (np.exp(stim.t_on/params.mu) - np.exp(-eps*stim.t_on/D)) +
+#             np.exp(-eps*stim.t_on/D))
+
+
+MAX_SIM_TIME = 10_000
+
+fig = plt.figure()
+plt.plot(stim_speed_deltas, stim_speed_deltas*slope, 'b-')
+for (mag, delta), (success, index, t, u, q) in results.items():
+    if success:
+        plt.plot(delta, mag, 'g+')
+    else:
+        plt.plot(delta, mag, 'mx')
+plt.xlim(0, stim_speed_deltas[-1])
+plt.ylim(0, stim_mags[-1])
+
+if 'results' not in locals():
+    results = dict()
+
+my_tqdm = tqdm(list(product(stim_mags, stim_speed_deltas)))
+for mag, delta in my_tqdm:
+    my_key = (round(mag, 8), round(delta, 8))
+    if my_key in results.keys():
+        continue
+    stim = ApparentMotionStimulus(**(stim_args | {'mag': mag, 'speed': sim_speed+delta}))
+    max_time_step = 1e-2
+    time_step = stim.period / np.ceil(stim.period / max_time_step)
+    # time = TimeRay(0, time_step)
+    time = TimeDomain_Start_Stop_MaxSpacing(0, MAX_SIM_TIME, time_step)
+
+    def rhs(t, u):
+        return model.rhs(t, u) + stim(space.array, t)
+              
+    space.reset()
+
+    next_period_time = stim.next_off(0)
+    lag_deq = deque([float('inf')]*5, maxlen=5)
+    stop_tol = 1e-3
+    success = None
+    for index, (t, (u, q)) in enumerate(zip(
+                                time,
+                                solver.solution_generator(u0, rhs, time))):
+        front = find_roots(space.array, u-theta, window=3)[-1]
+        lag = front - stim.front(t)
+        if not abs(t - next_period_time) < time.spacing/2:
+            continue
+        # stimulus is turning off
+        desc = f'({mag:.3f}, {delta:.3f}) l={lag:.3g}|ch={(lag-lag_deq[-1]):.3g}'
+
+        my_tqdm.set_description(desc=desc.ljust(35, ' '))
+        next_period_time = stim.next_off(t+time.spacing)
+        if (all(abs(lag2 - lag) < stop_tol for lag2 in lag_deq) or 
+           abs(sum(lag_deq)/len(lag_deq) - lag) < stop_tol):
+            results[my_key] = (True, index, t, u, q)
+            break
+        elif -lag > stim.width * 1.05:
+            results[my_key] = (False, index, t, u, q)
+            break
+        lag_deq.append(lag)
+
+    success, *_ = results[my_key]
+    if success == None:
+        # time out
+        plt.plot(delta, mag, 'k.')
+    if success:
+        plt.plot(delta, mag, 'g+')
+    else:
+        plt.plot(delta, mag, 'mx')
+    fig.canvas.draw()
+    plt.pause(1e-3)
+
+
+if False:
+    with open(DATA_PATH, 'rb') as f:
+        results = pickle.load(f)
+if False:
+    with open(DATA_PATH, 'wb') as f:
+        pickle.dump(results, f)
 
 plt.figure()
-theta_line, = plt.plot([space.left, space.right], [theta]*2, 'k:')
-stim_line, = plt.plot(space.array, stim(space.array, 0)[0], 'm-')
-u_line, = plt.plot(space.array, u0[0], 'b-')
-q_line, = plt.plot(space.array, u0[1], 'b--')
-
-num_ticks = 6
-def plot_callback():
-    plt.xlim(space.left, space.right)
-    ticks = space.array[::space.num_points//num_ticks]
-    plt.xticks(ticks, [f'{tick:.2f}' for tick in ticks])
-    u_line.set_xdata(space.array)
-    q_line.set_xdata(space.array)
-    stim_line.set_xdata(space.array)
-    theta_line.set_xdata([space.left, space.right])
-
-space.callback = plot_callback
-space.reset()
-sample_freq = 251
-for t, (u, q) in islice(zip(time,
-                            solver.solution_generator(u0, rhs, time)),
-                        0, None, sample_freq):
-    u_line.set_ydata(u)
-    q_line.set_ydata(q)
-    stim_line.set_ydata(stim(space.array, t)[0])
-    plt.pause(1e-3)
-    if np.max(u) < theta:
-        break
+for (mag, delta), (success, index, t, u, q) in results.items():
+    if success:
+        plt.plot(delta, mag, 'g+')
+    else:
+        plt.plot(delta, mag, 'mx')
+plt.plot(stim_speed_deltas, stim_speed_deltas*slope, 'b-')
+# plt.plot(tighter_bound_slope(stim_mags), stim_mags, 'g-')
+plt.xlim(0, stim_speed_deltas[-1])
+plt.ylim(0, stim_mags[-1])
+plt.xlabel(r'$\Delta_c$')
+plt.ylabel(r'$\varepsilon$')
+plt.title(f'Apparent Motion ({EXPERIMENT_NAME})')
+for ext in ['.png', '.pdf', '.eps']:
+    plt.savefig(MEDIA_PATH + ext)

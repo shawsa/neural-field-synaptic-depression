@@ -51,28 +51,39 @@ def get_shift_callback(shift_tol: float, shift_fraction: float, space: ShiftingD
 def ShiftingEuler(shift_tol: float, shift_fraction: float, space: ShiftingDomain):
     return single_step_modifier(get_shift_callback(shift_tol, shift_fraction, space))(Euler)()
 
-def generate_stimulus(*, t_on, t_off, c, delta_c, stim_start, stim_width, stim_mag):
-    period = t_on + t_off
-    stim_speed = c + delta_c
-    def stim(x, t):
-        x_mapped = x - np.floor(t/period)*period*stim_speed
-        t_mapped = t - np.floor(t/period)*period
+class ApparentMotionStimulus:
+    def __init__(self, *, t_on, t_off, speed, start, width, mag):
+        self.t_on = t_on
+        self.t_off = t_off
+        self.speed = speed
+        self.start = start
+        self.width = width
+        self.mag = mag
+
+        self.period = t_on + t_off
+
+    def __call__(self, x, t):
+        x_mapped = x - np.floor(t/self.period)*self.period*self.speed
+        t_mapped = t - np.floor(t/self.period)*self.period
         stim_vec = np.zeros((2, *x.shape))
-        stim_vec[0] = (np.heaviside(stim_start - x_mapped, 0.5) * 
-                       np.heaviside(x_mapped - (stim_start - stim_width), 0.5) * 
-                       np.heaviside(t_on - t_mapped, 1) * stim_mag)
+        stim_vec[0] = (np.heaviside(self.start - x_mapped, 0.5) * 
+                       np.heaviside(x_mapped - (self.start - self.width), 0.5) * 
+                       np.heaviside(self.t_on - t_mapped, 1) * self.mag)
         return stim_vec
-    return stim
 
-def generate_period_time(*, t_on, t_off, c, delta_c, stim_start, stim_width, stim_mag):
-    period = t_on + t_off
-    def period_time(t):
-        return t - np.floor(t/period)*period
-    return period_time
+    def period_time(self, t):
+        return t - np.floor(t/self.period)*self.period
 
-def generate_stim_front(*, t_on, t_off, c, delta_c, stim_start, stim_width, stim_mag):
-    period = t_on + t_off
-    stim_speed = c + delta_c
-    def stim_front(t):
-        return stim_start + np.floor(t/period)*period*stim_speed
-    return stim_front
+    def front(self, t):
+        return self.start + np.floor(t/self.period)*self.period*self.speed
+
+    def next_on(self, t):
+        return (1 + np.floor(t/self.period))*self.period
+
+    def next_off(self, t):
+        period_start = np.floor(t/self.period)*self.period
+        if t - period_start < self.t_on:
+            # stimulus is currently on
+            return period_start + self.t_on
+        # stimulus is off
+        return period_start + self.period + self.t_on

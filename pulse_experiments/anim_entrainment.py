@@ -22,7 +22,6 @@ from time_integrator import Euler, EulerDelta
 from time_integrator_tqdm import TqdmWrapper
 
 from scipy.stats import linregress
-from more_itertools import windowed
 
 FILE_NAME = os.path.join(experiment_defaults.media_path,
                          'entrainment_test.gif')

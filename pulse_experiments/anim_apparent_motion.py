@@ -1,7 +1,7 @@
 
 import experiment_defaults
 
-import imageio
+import imageio.v2 as imageio
 import matplotlib.pyplot as plt
 import numpy as np
 import os.path
@@ -32,13 +32,12 @@ from time_domain import TimeRay, TimeDomain_Start_Stop_MaxSpacing
 from apparent_motion_utils import (
         ShiftingDomain,
         ShiftingEuler,
-        generate_stimulus,
-        generate_stim_front,
-        generate_period_time,
+        ApparentMotionStimulus,
 )
 
 FILE_NAME = os.path.join(experiment_defaults.media_path,
                          'apparent_motion.gif')
+SAVE_ANIMATION = False
 
 params = ParametersBeta(**{
     'alpha': 20.0,
@@ -63,37 +62,34 @@ symbol_params = symbolic_dictionary(c=c, Delta=Delta, theta=theta, **params.dict
 U, Q, *_ = get_traveling_pulse(symbol_params, validate=False)
 
 
-space = ShiftingDomain(-20, 40, 6_001)
-#time = TimeRay(0, 1e-2)
-time = TimeDomain_Start_Stop_MaxSpacing(0, 80, 1e-2)
-
+space = ShiftingDomain(-20, 10, 3_001)
 model = NeuralField(
             space=space,
             firing_rate=partial(heaviside_firing_rate, theta=theta),
             weight_kernel=exponential_weight_kernel,
             params=params)
 
-solver = ShiftingEuler(shift_tol=1e-6, shift_fraction=2/3, space=space)
+solver = ShiftingEuler(shift_tol=1e-4, shift_fraction=4/5, space=space)
 
 u0 = np.empty((2, space.num_points))
 u0[0] = U(space.array)
 u0[1] = Q(space.array)
 
-# Stimulus
-stim_dict = {
-        't_on' : 0.5,
-        't_off' : 0.5,
-        'delta_c' : 0.25,
-        # 'delta_c' : 0.3,
-        'stim_mag' : 0.04,
-        # 'stim_mag' : 0.08,
-        'stim_width' : 5,
-        'stim_start' : -.05,
-        'c' : c
-}
-stim = generate_stimulus(**stim_dict)
-stim_front = generate_stim_front(**stim_dict)
-period_time = generate_period_time(**stim_dict)
+stim = ApparentMotionStimulus(**{
+        't_on': 0.5,
+        't_off': 0.5,
+        'speed': c + 0.25,
+        # 'speed': c + 0.3,
+        'mag': 0.04,
+        # 'mag': 0.08,
+        'width': 5,
+        'start': -.05,
+})
+
+max_time_step = 1e-2
+time_step = stim.period / np.ceil(stim.period / max_time_step)
+time = TimeRay(0, time_step)
+# time = TimeDomain_Start_Stop_MaxSpacing(0, 80, time_step)
 
 def rhs(t, u):
     return model.rhs(t, u) + stim(space.array, t)
@@ -106,9 +102,11 @@ except:
 
 fig = plt.figure(figsize=(10, 15))
 gs = fig.add_gridspec(2, 2)
-ax0 = fig.add_subplot(gs[0, :])
+ax0 = fig.add_subplot(gs[0, 0])
+ax_lag_series = fig.add_subplot(gs[0, 1])
 ax1 = fig.add_subplot(gs[1, 0])
 ax2 = fig.add_subplot(gs[1, 1])
+
 theta_line, = ax0.plot([space.left, space.right], [theta]*2, 'k:')
 stim_line, = ax0.plot(space.array, stim(space.array, 0)[0], 'm-')
 u_line, = ax0.plot(space.array, u0[0], 'b-')
@@ -134,7 +132,7 @@ front_natural_line, = ax1.plot([0, 0 - time_width],
                                [0, 0 - c*time_width],
                                'g-')
 front_stim_line, = ax1.plot([0, 0 - time_width],
-                            [0, 0 - (c+stim_dict['delta_c'])*time_width],
+                            [0, 0 - stim.speed*time_width],
                             'm-')
 front_line, = ax1.plot(times, fronts, 'b.')
 front_window_width = abs(fronts[-1] - fronts[0])
@@ -142,14 +140,15 @@ front_window_height = abs(times[-1] - times[0])
 ax1.set_xlim(times[-1]- front_window_height, times[-1])
 ax1.set_ylim(fronts[-1]- front_window_width, fronts[-1])
 
-relative_front_sample_len = int((stim_dict['t_on'] + stim_dict['t_off'])/time.spacing * 5)
+relative_front_sample_len = int((stim.t_on + stim.t_off)/time.spacing * 5)
 relative_fronts = [0] * relative_front_sample_len
-relative_times = [period_time(i*time.spacing)
+relative_times = [stim.period_time(i*time.spacing)
                   for i in range(1-relative_front_sample_len, 1, 1)]
-ax2.plot([stim_dict['t_on']]*2, [-1000, 1000], 'g:')
+ax2.plot([0, stim.period], [-stim.width]*2, 'r-')
+ax2.plot([stim.t_on]*2, [-1000, 1000], 'g:')
 relative_line, = ax2.plot(relative_times, relative_fronts, 'k.')
-relative_lead_line, = ax2.plot(0, 0, 'r.')
-ax2.set_xlim(0, stim_dict['t_on'] + stim_dict['t_off'])
+relative_lead_line, = ax2.plot(0, 0, 'go')
+ax2.set_xlim(0, stim.t_on + stim.t_off)
 ax2.set_ylim(-0.5, 0.5)
 
 ax0.set_xlabel('$x$')
@@ -159,10 +158,31 @@ ax1.set_ylabel('$x$')
 ax2.set_xlabel('$t$ (relative to period)')
 ax2.set_ylabel('Front lag')
 
+ax_lag_series.set_xlabel('Period')
+ax_lag_series.set_ylabel(r'Lag at $T_{off}$')
+
 plt.tight_layout()
 
-sample_freq = 21
-with imageio.get_writer(FILE_NAME, mode='I') as writer:
+sample_freq = 211
+class NullContext:
+    def __enter__(self):
+        pass
+    def __exit__(self, *args):
+        pass
+    def append_data(self, *args):
+        pass
+
+next_period_time = stim.next_off(0)
+last_lag = float('inf')
+period_index = 0
+stop_tol = 1e-5
+
+if SAVE_ANIMATION:
+    writer = imageio.get_writer(FILE_NAME, mode='I')
+else:
+    writer = NullContext()
+
+with writer:
     for index, (t, (u, q)) in enumerate(zip(
                                 time,
                                 solver.solution_generator(u0, rhs, time))):
@@ -171,8 +191,21 @@ with imageio.get_writer(FILE_NAME, mode='I') as writer:
         fronts[rolling_index] = front
         times[rolling_index] = t
         relative_rolling_index = index % relative_front_sample_len
-        relative_fronts[relative_rolling_index] = front - stim_front(t)
-        relative_times[relative_rolling_index] = period_time(t)
+        lag = front - stim.front(t)
+        relative_fronts[relative_rolling_index] = lag
+        relative_times[relative_rolling_index] = stim.period_time(t)
+        if abs(t - next_period_time) < time.spacing/2:
+            print(f'{lag=}, \t change={abs(lag-last_lag)}')
+            next_period_time = stim.next_off(t+time.spacing)
+            if abs(last_lag - lag) < stop_tol:
+                print('Entrainment success.')
+                break
+            elif -lag > stim.width * 1.05:
+                print('Entrainment failure.')
+                break
+            last_lag = lag
+            ax_lag_series.plot(period_index, lag, 'k.')
+            period_index += 1
         if index % sample_freq != 0:
             continue
         u_line.set_ydata(u)
@@ -182,17 +215,15 @@ with imageio.get_writer(FILE_NAME, mode='I') as writer:
         front_natural_line.set_data([t, t - time_width],
                                     [front, front - c*time_width])
         front_stim_line.set_data([t, t - time_width],
-                                 [front, front - (c+stim_dict['delta_c'])*time_width])
+                                 [front, front - stim.speed*time_width])
         ax1.set_xlim(times[rolling_index] - front_window_height, times[rolling_index])
         ax1.set_ylim(fronts[rolling_index] - front_window_width, fronts[rolling_index])
         relative_line.set_data(relative_times, relative_fronts)
-        relative_lead_line.set_data(relative_times[relative_rolling_index],
-                                    relative_fronts[relative_rolling_index])
+        relative_lead_line.set_data([relative_times[relative_rolling_index]],
+                                    [relative_fronts[relative_rolling_index]])
         ax2.set_ylim(min(relative_fronts), max(relative_fronts))
         plt.savefig(FILE_NAME + '.png')
         image = imageio.imread(FILE_NAME + '.png')
         os.remove(FILE_NAME + '.png')
         writer.append_data(image)
         plt.pause(1e-3)
-        if np.max(u) < theta:
-            break
