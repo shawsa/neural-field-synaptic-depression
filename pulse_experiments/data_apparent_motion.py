@@ -43,7 +43,7 @@ from apparent_motion_utils import (
     ApparentMotionStimulus,
 )
 
-EXPERIMENT_NO = 1
+EXPERIMENT_NO = 2
 stim_mags = np.linspace(0, 0.2, 21)[1:]
 stim_speed_deltas = np.linspace(0, 1.5, 21)[1:]
 match EXPERIMENT_NO:

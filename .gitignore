@@ -1,0 +1,7 @@
+
+*/__pycache__/*
+*.py[cod]
+*.ipynb_checkpoints/*
+
+front_experiments/data/*
+pulse_experiments/data/*
