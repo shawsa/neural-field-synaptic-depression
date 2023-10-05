@@ -2,13 +2,16 @@
 combinations. Use data generated from `data_bifurcation.py`.
 """
 
-from itertools import cycle
+import experiment_defaults
+
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
 import numpy as np
 import os
 import pickle
+
+from itertools import cycle
+from matplotlib.gridspec import GridSpec
 
 from data_speed_width_bifurcation import (
     SolutionSearch,
@@ -17,10 +20,9 @@ from data_speed_width_bifurcation import (
     MaxRefinementReachedException,
 )
 
-import experiment_defaults
 
 # for pulse profile
-from neural_field import ParametersBeta
+from neural_field_synaptic_depression.neural_field import ParametersBeta
 from helper_symbolics import (
     get_traveling_pulse,
     get_numerical_parameters,

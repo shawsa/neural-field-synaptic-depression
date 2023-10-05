@@ -13,12 +13,18 @@ from collections import deque
 from functools import partial
 from itertools import product
 
-from neural_field import (
+from neural_field_synaptic_depression.neural_field import (
     NeuralField,
     ParametersBeta,
     heaviside_firing_rate,
     exponential_weight_kernel,
 )
+from neural_field_synaptic_depression.root_finding_helpers import find_roots
+from neural_field_synaptic_depression.time_domain import (
+    TimeRay,
+    TimeDomain_Start_Stop_MaxSpacing,
+)
+
 
 from helper_symbolics import (
     expr_dict,
@@ -32,10 +38,6 @@ from helper_symbolics import (
 )
 
 from num_assist import Domain  # for quadrature
-
-from root_finding_helpers import find_roots
-
-from time_domain import TimeRay, TimeDomain_Start_Stop_MaxSpacing
 
 from apparent_motion_utils import (
     ShiftingDomain,

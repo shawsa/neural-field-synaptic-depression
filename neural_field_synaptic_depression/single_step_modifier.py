@@ -1,7 +1,7 @@
 import numpy as np
-from time_integrator import Euler
+from .time_integrator import Euler
 
-from time_domain import TimeDomain
+from .time_domain import TimeDomain
 
 
 def single_step_modifier(callback: callable):

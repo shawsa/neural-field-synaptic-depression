@@ -1,18 +1,19 @@
-import os
-from dataclasses import dataclass
+
+import experiment_defaults
 
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
+import os
 import pickle
 import sympy as sym
 
-import experiment_defaults
+from dataclasses import dataclass
+from itertools import product
+from tqdm import tqdm
+
 from helper_symbolics import generate_Newton_args_for_speed_width
 from newton import MaxIterationsReachedException, NewtonRootFind
-
-from tqdm import tqdm
-from itertools import product
 
 import warnings
 

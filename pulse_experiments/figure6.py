@@ -2,12 +2,18 @@ import experiment_defaults
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
 import os.path
 import pickle
 
-from apparent_motion_utils import ApparentMotionStimulus
-from neural_field import ParametersBeta
+from functools import partial
+from matplotlib.gridspec import GridSpec
+from tqdm import tqdm
+
+from apparent_motion_utils import (
+    ShiftingDomain,
+    ShiftingEuler,
+    ApparentMotionStimulus,
+)
 from helper_symbolics import (
     expr_dict,
     find_symbol_by_string,
@@ -18,7 +24,20 @@ from helper_symbolics import (
     recursive_reduce,
     symbolic_dictionary,
 )
+from neural_field_synaptic_depression.neural_field import (
+    NeuralField,
+    ParametersBeta,
+    heaviside_firing_rate,
+    exponential_weight_kernel,
+)
+from neural_field_synaptic_depression.root_finding_helpers import find_roots
+from neural_field_synaptic_depression.time_domain import (
+    TimeRay,
+    TimeDomain_Start_Stop_MaxSpacing,
+)
+
 from num_assist import Domain  # for quadrature
+
 
 plt.rcParams.update(
     {
@@ -87,21 +106,120 @@ for (t_on, t_off), color in zip(on_off_pairs, ["blue", "green", "black"]):
         label=f"ratio={t_on/t_off:.1f}",
     )
 
-ax_contour.text(.1, .1, "Success")
-ax_contour.text(.005, .7, "Failure", rotation=90)
-ax_contour.set_title("Entrainment \nby on/off ratio")
+ax_contour.text(0.1, 0.1, "Success")
+ax_contour.text(0.005, 0.7, "Failure", rotation=90)
+ax_contour.set_title("Entrainment \nby $T_{on}/T$ ratio")
 # ax_contour.legend(loc="upper right")
 ax_contour.set_xlabel(r"$\varepsilon$")
 ax_contour.set_ylabel(r"$\Delta_c$")
 
 # panel A - entrainment success
+space = ShiftingDomain(-40, 40, 6_001)
+model = NeuralField(
+    space=space,
+    firing_rate=partial(heaviside_firing_rate, theta=theta),
+    weight_kernel=exponential_weight_kernel,
+    params=params,
+)
+
+solver = ShiftingEuler(shift_tol=1e-4, shift_fraction=4 / 5, space=space)
+
+u0 = np.empty((2, space.num_points))
+u0[0] = U(space.array)
+u0[1] = Q(space.array)
+stim = ApparentMotionStimulus(
+    **{
+        "t_on": 0.5,
+        "t_off": 0.5,
+        "speed": c + 0.5,
+        "mag": 0.2,
+        "width": 1,
+        "start": -0.05,
+    }
+)
+max_time_step = 1e-2
+time_step = stim.period / np.ceil(stim.period / max_time_step)
+time = TimeDomain_Start_Stop_MaxSpacing(0, 8, time_step)
+
+
+def rhs(t, u):
+    return model.rhs(t, u) + stim(space.array, t)
+
+
+fronts = []
+space.reset()
+for t, (u, q) in tqdm(
+    zip(time, solver.solution_generator(u0, rhs, time)), total=len(time.array)
+):
+    front = find_roots(space.array, u - theta, window=3)[-1]
+    fronts.append(front)
+
+
 ax_success = fig.add_subplot(grid[0, 0])
-
+time_on = stim.next_on(0)
+while time_on < time.array[-1]:
+    stim_front = stim.front(time_on)
+    ax_success.fill_between(
+        [time_on, time_on + stim.t_on],
+        [stim_front] * 2,
+        [stim_front - stim.width] * 2,
+        color="magenta",
+    )
+    time_on = stim.next_on(time_on)
+ax_success.plot(time.array, fronts, "b-")
+ax_success.set_xlabel("$t$")
+ax_success.set_ylabel("$x$")
 ax_success.set_title("Entrainment \nSuccess")
+label_x_loc = 5
+ax_success.plot(label_x_loc, 2, "b.")
+ax_success.text(label_x_loc + 0.5, 1.6, "pulse")
+ax_success.fill_between(
+    [label_x_loc - 0.2, label_x_loc + 0.2], [0.6] * 2, [0.8] * 2, color="magenta"
+)
+ax_success.text(label_x_loc + 0.5, 0.3, "stim")
 
-# panel B - entrainment success
+# panel B - entrainment failure
+stim = ApparentMotionStimulus(
+    **{
+        "t_on": 0.5,
+        "t_off": 0.5,
+        "speed": c + 0.5,
+        "mag": 0.12,
+        "width": 1,
+        "start": -0.05,
+    }
+)
+time = TimeDomain_Start_Stop_MaxSpacing(0, 12, time_step)
+
+
+def rhs(t, u):
+    return model.rhs(t, u) + stim(space.array, t)
+
+
+fronts = []
+space.reset()
+for t, (u, q) in tqdm(
+    zip(time, solver.solution_generator(u0, rhs, time)), total=len(time.array)
+):
+    front = find_roots(space.array, u - theta, window=3)[-1]
+    fronts.append(front)
+
+
 ax_failure = fig.add_subplot(grid[0, 1])
+time_on = stim.next_on(0)
+while time_on < time.array[-1]:
+    stim_front = stim.front(time_on)
+    ax_failure.fill_between(
+        [time_on, time_on + stim.t_on],
+        [stim_front] * 2,
+        [stim_front - stim.width] * 2,
+        color="magenta",
+    )
+    time_on = stim.next_on(time_on)
+ax_failure.plot(time.array, fronts, "b-")
 ax_failure.set_title("Entrainment \nFailure")
+ax_failure.set_xlabel("$t$")
+ax_failure.set_ylabel("$x$")
 
 
 # panel labels

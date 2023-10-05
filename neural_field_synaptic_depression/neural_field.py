@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from math import ceil
 import numpy as np
 from scipy.signal import fftconvolve
-from space_domain import SpaceDomain
+from .space_domain import SpaceDomain
 from typing import Callable
 
 

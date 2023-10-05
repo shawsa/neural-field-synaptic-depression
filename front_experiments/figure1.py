@@ -12,8 +12,13 @@ from matplotlib.gridspec import GridSpec
 import numpy as np
 import os.path
 
-from neural_field import Parameters
-from plotting_styles import Q_style, U_style, solution_styles, threshold_style
+from neural_field_synaptic_depression.neural_field import Parameters
+from plotting_helpers.plotting_styles import (
+    Q_style,
+    U_style,
+    solution_styles,
+    threshold_style,
+)
 from front_profile_helpers import (
     Q_progressive,
     Q_regressive,
@@ -175,7 +180,7 @@ ax_gamma.legend(loc="lower right", framealpha=1.0)
 # ax_gamma.set_xlabel("$\\gamma$")
 # ax_gamma.set_ylabel("speed ($c$)")
 ax_gamma.text(0.5, -0.13, r"$\gamma$", transform=ax_gamma.transAxes)
-ax_gamma.text(-.08, 0.7, "$c$", transform=ax_gamma.transAxes, rotation=90)
+ax_gamma.text(-0.08, 0.7, "$c$", transform=ax_gamma.transAxes, rotation=90)
 
 ax_gamma.set_xlim(0.04, 1)
 ax_gamma.set_ylim(-2.1, 4.1)
@@ -275,8 +280,8 @@ ax_stable.text(xs[0] + 5, 0.9, f"c={c_hi:.2f}")
 ax_stable.text(xs[0] + 5, 0.7, "Stable")
 ax_stable.set_xticks([0], [r"$\xi = 0$"])
 ax_stable.set_xlim(xs[0], xs[-1])
-ax_stable.text(20, .1, r"$U(\xi)$")
-ax_stable.text(20, .8, r"$Q(\xi)$")
+ax_stable.text(20, 0.1, r"$U(\xi)$")
+ax_stable.text(20, 0.8, r"$Q(\xi)$")
 
 ###################################################
 # unstable profile
@@ -310,8 +315,8 @@ ax_unstable.plot(
 )
 ax_unstable.text(xs[0] + 5, 0.7, "Unstable")
 ax_unstable.text(xs[0] + 5, 0.9, f"c={c_lo:.2f}")
-ax_unstable.text(20, .1, r"$U(\xi)$")
-ax_unstable.text(20, .8, r"$Q(\xi)$")
+ax_unstable.text(20, 0.1, r"$U(\xi)$")
+ax_unstable.text(20, 0.8, r"$Q(\xi)$")
 
 ###################################################
 # regresive profile
@@ -337,8 +342,8 @@ ax_regressive.plot(
 )
 ax_regressive.text(xs[0] + 5, 0.7, "Stable")
 ax_regressive.text(xs[0] + 5, 0.9, f"c={c_neg:.2f}")
-ax_regressive.text(20, .1, r"$U(\xi)$")
-ax_regressive.text(20, .75, r"$Q(\xi)$")
+ax_regressive.text(20, 0.1, r"$U(\xi)$")
+ax_regressive.text(20, 0.75, r"$Q(\xi)$")
 
 ###################################################
 # grid

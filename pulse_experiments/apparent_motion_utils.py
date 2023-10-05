@@ -1,8 +1,8 @@
 import numpy as np
 
-from single_step_modifier import single_step_modifier
-from space_domain import SpaceDomain
-from time_integrator import Euler
+from neural_field_synaptic_depression.single_step_modifier import single_step_modifier
+from neural_field_synaptic_depression.space_domain import SpaceDomain
+from neural_field_synaptic_depression.time_integrator import Euler
 
 class ShiftingDomain(SpaceDomain):
 

@@ -1,7 +1,7 @@
 '''A time-integration class for solving ODEs numerically.'''
 
 from abc import ABC, abstractmethod, abstractproperty
-from time_domain import TimeDomain, TimeDomain_Start_Stop_Steps
+from .time_domain import TimeDomain, TimeDomain_Start_Stop_Steps
 
 class TimeIntegrator(ABC):
 

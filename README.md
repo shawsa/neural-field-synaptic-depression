@@ -26,3 +26,6 @@ Drivers for the `neural_field_synaptic_depression` module can be found in the `f
  	- `pulse_experiments/data_figure6.py`
 	- `pulse_experiments/figure6.py`
 
+
+# Example Driver
+The script `example_driver.py` demonstrates basic usage of the package to run simulations.

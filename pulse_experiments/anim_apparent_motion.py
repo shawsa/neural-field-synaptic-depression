@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import experiment_defaults
 
 import imageio.v2 as imageio
@@ -8,12 +9,17 @@ import os.path
 from functools import partial
 from itertools import islice
 
-from neural_field import (
+from neural_field_synaptic_depression.neural_field import (
     NeuralField,
     ParametersBeta,
     heaviside_firing_rate,
     exponential_weight_kernel,
 )
+from neural_field_synaptic_depression.time_domain import (
+        TimeRay,
+        TimeDomain_Start_Stop_MaxSpacing,
+)
+from neural_field_synaptic_depression.root_finding_helpers import find_roots
 
 from helper_symbolics import (
     expr_dict,
@@ -23,11 +29,6 @@ from helper_symbolics import (
     recursive_reduce,
     symbolic_dictionary,
 )
-
-from root_finding_helpers import find_roots
-
-from time_domain import TimeRay, TimeDomain_Start_Stop_MaxSpacing
-
 from apparent_motion_utils import (
     ShiftingDomain,
     ShiftingEuler,

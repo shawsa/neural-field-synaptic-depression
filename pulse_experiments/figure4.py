@@ -3,12 +3,13 @@
 
 import experiment_defaults
 
-from functools import partial
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
 import numpy as np
 import os.path
 import pickle
+
+from functools import partial
+from matplotlib.gridspec import GridSpec
 from tqdm import tqdm
 
 from helper_symbolics import get_speed_and_width
@@ -23,18 +24,21 @@ from num_assist import (
     local_interp,
     local_diff,
 )
-from neural_field import (
+
+from neural_field_synaptic_depression.neural_field import (
     NeuralField,
     ParametersBeta,
     heaviside_firing_rate,
     exponential_weight_kernel,
 )
-from space_domain import BufferedSpaceDomain
-from time_domain import TimeDomain_Start_Stop_MaxSpacing
-from time_integrator import Euler
-from time_integrator_tqdm import TqdmWrapper
+from neural_field_synaptic_depression.space_domain import BufferedSpaceDomain
+from neural_field_synaptic_depression.time_domain import (
+    TimeDomain_Start_Stop_MaxSpacing,
+)
+from neural_field_synaptic_depression.time_integrator import Euler
+from neural_field_synaptic_depression.time_integrator_tqdm import TqdmWrapper
 
-from root_finding_helpers import find_roots
+from neural_field_synaptic_depression.root_finding_helpers import find_roots
 
 plt.rcParams.update(
     {

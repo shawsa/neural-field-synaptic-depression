@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 from tqdm import tqdm
-from plotting_styles import U_style, Q_style, solution_styles, threshold_style
+from .plotting_styles import U_style, Q_style, solution_styles, threshold_style
 
 def make_animation(file_name,
                    ts,

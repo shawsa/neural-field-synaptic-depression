@@ -10,16 +10,18 @@ One caviat is that we expect there to be regions in parameter space without
 solutions.
 """
 
+import experiment_defaults
+
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
 import os
 import pickle
 
-import experiment_defaults
+from itertools import product
+
 from num_assist import Domain, find_delta, find_c, pulse_profile, nullspace_amplitudes, v1, v2
 
-from itertools import product
 
 xs_right = Domain(0, 200, 8001)
 xs_left = Domain(-200, 0, 8001)

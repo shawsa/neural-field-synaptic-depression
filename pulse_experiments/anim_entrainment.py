@@ -12,16 +12,37 @@ import numpy as np
 import os.path
 from functools import partial
 from itertools import islice
-from neural_field import NeuralField, ParametersBeta, heaviside_firing_rate, exponential_weight_kernel
-from num_assist import Domain, find_delta, find_c, pulse_profile, nullspace_amplitudes, v1, v2, local_interp
-from plotting_helpers import make_animation
-from root_finding_helpers import find_roots
-from space_domain import SpaceDomain, BufferedSpaceDomain
-from time_domain import TimeDomain, TimeDomain_Start_Stop_MaxSpacing
-from time_integrator import Euler, EulerDelta
-from time_integrator_tqdm import TqdmWrapper
-
 from scipy.stats import linregress
+
+from neural_field_synaptic_depression.neural_field import (
+        NeuralField,
+        ParametersBeta,
+        heaviside_firing_rate,
+        exponential_weight_kernel,
+)
+from neural_field_synaptic_depression.root_finding_helpers import find_roots
+from neural_field_synaptic_depression.space_domain import (
+        SpaceDomain,
+        BufferedSpaceDomain,
+)
+from neural_field_synaptic_depression.time_domain import (
+        TimeDomain,
+        TimeDomain_Start_Stop_MaxSpacing,
+)
+from neural_field_synaptic_depression.time_integrator import Euler, EulerDelta
+from neural_field_synaptic_depression.time_integrator_tqdm import TqdmWrapper
+from plotting_helpers.plotting_helpers import make_animation
+from num_assist import (
+        Domain,
+        find_delta,
+        find_c,
+        pulse_profile,
+        nullspace_amplitudes,
+        v1,
+        v2,
+        local_interp,
+)
+
 
 FILE_NAME = os.path.join(experiment_defaults.media_path,
                          'entrainment_test.gif')
