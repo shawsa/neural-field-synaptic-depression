@@ -20,7 +20,6 @@ from data_speed_width_bifurcation import (
     MaxRefinementReachedException,
 )
 
-
 # for pulse profile
 from neural_field_synaptic_depression.neural_field import ParametersBeta
 from helper_symbolics import (
@@ -55,16 +54,32 @@ subplot_label_font = {
 }
 
 fig = plt.figure(figsize=figsize)
-grid = GridSpec(2, 3)
+grid = GridSpec(12, 24)
 
-ax_prof = fig.add_subplot(grid[0, 0])
-ax_speed_alpha = fig.add_subplot(grid[0, 1])
-ax_speed_gamma = fig.add_subplot(grid[0, 2], sharey=ax_speed_alpha)
+col1_slice = slice(0, 7)
+col2_slice = slice(9, 16)
+col3_slice = slice(17, 24)
+col2_color_slice = slice(10, 15)
+col3_color_slice = slice(18, 23)
 
-ax_prof_unstable = fig.add_subplot(grid[1, 0])
-ax_width_alpha = fig.add_subplot(grid[1, 1], sharex=ax_speed_alpha)
+row1_slice = slice(1, 6)
+row2_slice = slice(7, 12)
+color_slice = slice(0, 1)
+speed_slice = slice(2, 6)
+width_slice = slice(7, 12)
+
+
+ax_prof = fig.add_subplot(grid[row1_slice, col1_slice])
+ax_prof_unstable = fig.add_subplot(grid[row2_slice, col1_slice])
+
+ax_gamma_colorbar = fig.add_subplot(grid[color_slice, col2_color_slice])
+ax_speed_alpha = fig.add_subplot(grid[speed_slice, col2_slice])
+ax_width_alpha = fig.add_subplot(grid[width_slice, col2_slice], sharex=ax_speed_alpha)
+
+ax_alpha_colorbar = fig.add_subplot(grid[color_slice, col3_color_slice])
+ax_speed_gamma = fig.add_subplot(grid[speed_slice, col3_slice], sharey=ax_speed_alpha)
 ax_width_gamma = fig.add_subplot(
-    grid[1, 2], sharex=ax_speed_gamma, sharey=ax_width_alpha
+    grid[width_slice, col3_slice], sharex=ax_speed_gamma, sharey=ax_width_alpha
 )
 
 for ax in [ax_speed_gamma, ax_width_gamma]:
@@ -324,7 +339,10 @@ ax_width_alpha.set_xticks([11, 20], [11, 20])
 
 ax_width_alpha.set_ylim(0, 14)
 ax_width_alpha.set_yticks([0, 14], [0, 14])
-ax_width_alpha.text(-.15, .5, r"$\Delta$", rotation=90, transform=ax_width_alpha.transAxes)
+ax_width_alpha.text(
+    -0.15, 0.5, r"$\Delta$", rotation=90, transform=ax_width_alpha.transAxes
+)
+ax_width_alpha.set_xticks([11, 19], [11, 19])
 # plt.colorbar(
 #     matplotlib.cm.ScalarMappable(norm=gamma_color_norm, cmap=cmap),
 #     ax=ax_width_alpha,
@@ -372,7 +390,7 @@ for alpha, color in zip(plot_alphas, cycle(alpha_colors)):
 ax_width_gamma.fill_between([0.2, 0.4], [-100] * 2, [100] * 2, color="gray")
 ax_width_gamma.text(0.205, 5, "Fronts", color="white", rotation=90)
 ax_width_gamma.set_xlim(0.12, 0.22)
-ax_width_gamma.set_xticks([0.12, 0.2], [0.12, 0.2])
+ax_width_gamma.set_xticks([0.13, 0.2], [0.13, 0.2])
 ax_width_gamma.text(0.5, -0.12, r"$\gamma$", transform=ax_width_gamma.transAxes)
 # plt.colorbar(
 #     matplotlib.cm.ScalarMappable(norm=alpha_color_norm, cmap=cmap),
@@ -388,7 +406,24 @@ ax_width_gamma.text(
     transform=ax_width_gamma.transAxes,
 )
 
-grid.tight_layout(fig, w_pad=.5, h_pad=-0.5)
+# colorbars
+plt.colorbar(
+    matplotlib.cm.ScalarMappable(norm=alpha_color_norm, cmap=cmap_alpha),
+    cax=ax_alpha_colorbar,
+    orientation="horizontal",
+)
+ax_alpha_colorbar.set_xticks([11, 20], [11, 20])
+ax_alpha_colorbar.text(0.5, -0.7, r"$\tau_q$", transform=ax_alpha_colorbar.transAxes)
+
+plt.colorbar(
+    matplotlib.cm.ScalarMappable(norm=gamma_color_norm, cmap=cmap_gamma),
+    cax=ax_gamma_colorbar,
+    orientation="horizontal",
+)
+ax_gamma_colorbar.set_xticks([.10, .2], [.10, .2])
+ax_gamma_colorbar.text(0.5, -0.7, r"$\gamma$", transform=ax_gamma_colorbar.transAxes)
+
+# grid.tight_layout(fig, w_pad=0.5, h_pad=-0.5)
 
 for ext in [".pdf", ".png"]:
     plt.savefig(IMAGE_FILE + ext)
