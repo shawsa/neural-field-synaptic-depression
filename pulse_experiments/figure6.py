@@ -48,6 +48,7 @@ plt.rcParams.update(
 
 DATA_FILE = os.path.join(experiment_defaults.data_path, "figure6.pickle")
 FIG_FILE = os.path.join(experiment_defaults.media_path, "figure6")
+HI_RES_FIG_FILE = os.path.join(experiment_defaults.media_path, "fig6_hi_res.png")
 
 # model constants
 
@@ -139,7 +140,8 @@ stim = ApparentMotionStimulus(
 )
 max_time_step = 1e-2
 time_step = stim.period / np.ceil(stim.period / max_time_step)
-time = TimeDomain_Start_Stop_MaxSpacing(0, 8, time_step)
+time = TimeDomain_Start_Stop_MaxSpacing(0, 12, time_step)
+# time = TimeDomain_Start_Stop_MaxSpacing(0, 8, time_step)
 
 
 def rhs(t, u):
@@ -172,7 +174,7 @@ ax_success.set_ylabel("$x$")
 ax_success.set_title("Entrainment \nSuccess")
 label_x_loc = 5
 ax_success.plot(label_x_loc, 2, "b.")
-ax_success.text(label_x_loc + 0.5, 1.6, "pulse")
+ax_success.text(label_x_loc + 0.5, 1.8, "pulse")
 ax_success.fill_between(
     [label_x_loc - 0.2, label_x_loc + 0.2], [0.6] * 2, [0.8] * 2, color="magenta"
 )
@@ -237,5 +239,6 @@ for ax, label in [(ax_success, "A"), (ax_failure, "B"), (ax_contour, "C")]:
     )
 
 plt.tight_layout()
+plt.savefig(HI_RES_FIG_FILE, dpi=300)
 for ext in [".png", ".pdf"]:
     plt.savefig(FIG_FILE + ext)

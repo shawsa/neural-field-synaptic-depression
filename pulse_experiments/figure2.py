@@ -31,6 +31,7 @@ from helper_symbolics import (
 # Bifurcation data
 DATA_FILE = os.path.join(experiment_defaults.data_path, "smooth_bifurcation.pickle")
 IMAGE_FILE = os.path.join(experiment_defaults.media_path, "figure2")
+HI_RES_IMAGE_FILE = os.path.join(experiment_defaults.media_path, "hi_res_figure2.png")
 with open(DATA_FILE, "rb") as f:
     alphas, gammas, stable_search, unstable_search = pickle.load(f)
 alphas.sort()
@@ -425,5 +426,6 @@ ax_gamma_colorbar.text(0.5, -0.7, r"$\gamma$", transform=ax_gamma_colorbar.trans
 
 # grid.tight_layout(fig, w_pad=0.5, h_pad=-0.5)
 
+plt.savefig(HI_RES_IMAGE_FILE, dpi=300)
 for ext in [".pdf", ".png"]:
     plt.savefig(IMAGE_FILE + ext)
