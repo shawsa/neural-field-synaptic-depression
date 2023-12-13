@@ -1,3 +1,5 @@
+# Link
+This is the code for our recent paper now on the arXiv: [https://arxiv.org/abs/2312.06100](https://arxiv.org/abs/2312.06100).
 # neural-field-synaptic-depression
 We implement a neural feild model with non-linear negative feedback in the form of biologically plausible synaptic depression. We use this model to conduct a number of simulations involving the stimulus-response function and traveling pulse entrainment to stimlui. The details will be published shortly.
 
