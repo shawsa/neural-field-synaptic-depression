@@ -12,6 +12,7 @@ import os.path
 import pickle
 
 from functools import partial
+from itertools import product
 from matplotlib.gridspec import GridSpec
 from tqdm import tqdm
 
@@ -46,6 +47,10 @@ plt.rcParams.update(
 FIG_FILE_NAME = os.path.join(experiment_defaults.media_path, "figure3")
 DATA_FILE_NAME = os.path.join(
     experiment_defaults.data_path, "spatially_homogeneous_limit.pickle"
+)
+
+ERROR_FILE_NAME = os.path.join(
+    experiment_defaults.data_path, "figure3_error.pickle"
 )
 
 
@@ -99,10 +104,13 @@ y_slice = slice(0, t_stop_index, y_stride)
 
 sol_array = np.array([u[0][x_slice] for u in us[y_slice]]).T
 
-figsize = (7, 3)
-grid = GridSpec(1, 2)
+# figure
+
+figsize = (7, 6)
+grid = GridSpec(2, 2)
 fig = plt.figure(figsize=figsize)
 
+# simulation panel
 ax_heatmap = fig.add_subplot(grid[0, 0])
 
 heatmap = ax_heatmap.pcolormesh(
@@ -130,9 +138,9 @@ ax_heatmap.set_ylabel("$x$")
 ax_heatmap.set_xlabel("$t$")
 ax_heatmap.set_title(f"$I(x,t) = {epsilon} \\delta(t - {delta_time})$")
 ax_heatmap.legend(loc="lower right")
-ax_heatmap.tight_layout()
 
 # wave response panel
+
 with open(DATA_FILE_NAME, "rb") as f:
     params, theta, epsilons, responses = pickle.load(f)
 
@@ -150,11 +158,73 @@ ax_response.set_yticks([-4, 0, 4, 8])
 ax_response.set_title("Front response to global stimulus")
 ax_response.legend(loc="upper left")
 
+
+# error panel
+
+with open(ERROR_FILE_NAME, "rb") as f:
+    data_list = pickle.load(f)
+
+alphas = []
+gammas = []
+epsilons = []
+data_dict = {}
+for params, theta, epsilon, speed, measured_response in data_list:
+    alphas.append(params.alpha)
+    gammas.append(params.gamma)
+    epsilons.append(epsilon)
+    data_dict[(params.alpha, params.gamma, epsilon)] = measured_response[-1]
+
+alphas = sorted(list(set(alphas)))
+gammas = sorted(list(set(gammas)))
+epsilons = sorted(list(set(epsilons)))
+
+error_dict = {}
+e1, e2 = epsilons
+for alpha, gamma in product(alphas, gammas):
+    r1 = data_dict[(alpha, gamma, e1)]
+    r2 = data_dict[(alpha, gamma, e2)]
+    approx = (r2 - r1)/(e2 - e1)
+    response_slope = response(1, mu=1.0, alpha=alpha, beta=1/gamma-1, theta=theta)
+    error_dict[(alpha, gamma)] = abs((response_slope - approx)/approx)
+
+alpha_mat, gamma_mat = np.meshgrid(alphas, gammas)
+err_mat = np.zeros_like(alpha_mat)
+for index, (alpha, gamma) in enumerate(zip(alpha_mat.ravel(), gamma_mat.ravel())):
+    err_mat.ravel()[index] = error_dict[(alpha, gamma)]
+
+ax_error = fig.add_subplot(grid[1, 1])
+heatmap = ax_error.pcolormesh(
+    alpha_mat, gamma_mat, err_mat, cmap="viridis"
+)
+plt.colorbar(heatmap, ax=ax_error, label="error")
+ax_error.set_xlabel("$\\tau_q$")
+ax_error.set_ylabel("$\\gamma$")
+ax_error.set_title("Relative Error")
+
+# theory plot
+
+slope_mat = response(1, alpha=alpha_mat, beta=1/gamma_mat-1, theta=theta, mu=1.0)
+ax_theory = fig.add_subplot(grid[1, 0])
+heatmap = ax_theory.pcolormesh(
+    alpha_mat, gamma_mat, slope_mat, cmap="viridis"
+)
+plt.colorbar(heatmap, ax=ax_theory, label="slope")
+ax_theory.set_xlabel("$\\tau_q$")
+ax_theory.set_ylabel("$\\gamma$")
+ax_theory.set_title("Wave response slope")
+
+
+# subplot labels
 subplot_label_font = {
     "size": "x-large",
     "weight": "bold",
 }
-for ax, label in [(ax_heatmap, "A"), (ax_response, "B")]:
+for ax, label in [
+        (ax_heatmap, "A"),
+        (ax_response, "B"),
+        (ax_theory, "C"),
+        (ax_error, "D"),
+]:
     ax.text(
         -0.15,
         1.04,
