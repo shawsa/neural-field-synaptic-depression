@@ -106,8 +106,8 @@ sol_array = np.array([u[0][x_slice] for u in us[y_slice]]).T
 
 # figure
 
-figsize = (7, 6)
-grid = GridSpec(2, 2)
+figsize = (7, 2.5)
+grid = GridSpec(1, 3)
 fig = plt.figure(figsize=figsize)
 
 # simulation panel
@@ -133,11 +133,14 @@ ax_heatmap.plot(
     label="predicted",
 )
 
+ax_heatmap.text(3, 30, "measured", rotation=40, color="b")
+ax_heatmap.text(5, 10, "predicted", rotation=40, color="g")
+
 plt.colorbar(heatmap, ax=ax_heatmap, label="$u$")
 ax_heatmap.set_ylabel("$x$")
 ax_heatmap.set_xlabel("$t$")
 ax_heatmap.set_title(f"$I(x,t) = {epsilon} \\delta(t - {delta_time})$")
-ax_heatmap.legend(loc="lower right")
+# ax_heatmap.legend()
 
 # wave response panel
 
@@ -148,8 +151,8 @@ response_slope = response(1, **params.dict, theta=theta)
 
 ax_response = fig.add_subplot(grid[0, 1])
 
+ax_response.plot(epsilons, responses, "g.", label="Simulation")
 ax_response.plot(epsilons, epsilons * response_slope, "k-", label="Theory")
-ax_response.plot(epsilons, responses, "go", label="Simulation")
 
 ax_response.set_xlabel("$\\varepsilon$")
 ax_response.set_ylabel("$\\nu_\\infty$")
@@ -187,24 +190,16 @@ for alpha, gamma in product(alphas, gammas):
     response_slope = response(1, mu=1.0, alpha=alpha, beta=1/gamma-1, theta=theta)
     error_dict[(alpha, gamma)] = abs((response_slope - approx)/approx)
 
-alpha_mat, gamma_mat = np.meshgrid(alphas, gammas)
-err_mat = np.zeros_like(alpha_mat)
-for index, (alpha, gamma) in enumerate(zip(alpha_mat.ravel(), gamma_mat.ravel())):
-    err_mat.ravel()[index] = error_dict[(alpha, gamma)]
-
-ax_error = fig.add_subplot(grid[1, 1])
-heatmap = ax_error.pcolormesh(
-    alpha_mat, gamma_mat, err_mat, cmap="viridis"
-)
-plt.colorbar(heatmap, ax=ax_error, label="error")
-ax_error.set_xlabel("$\\tau_q$")
-ax_error.set_ylabel("$\\gamma$")
-ax_error.set_title("Relative Error")
+print(f"Max error: {max(error_dict.values()):.3E}")
 
 # theory plot
 
+alphas = np.linspace(min(alphas), max(alphas), 201)
+gammas = np.linspace(min(gammas), max(gammas), 201)
+alpha_mat, gamma_mat = np.meshgrid(alphas, gammas)
+
 slope_mat = response(1, alpha=alpha_mat, beta=1/gamma_mat-1, theta=theta, mu=1.0)
-ax_theory = fig.add_subplot(grid[1, 0])
+ax_theory = fig.add_subplot(grid[0, 2])
 heatmap = ax_theory.pcolormesh(
     alpha_mat, gamma_mat, slope_mat, cmap="viridis"
 )
@@ -223,7 +218,6 @@ for ax, label in [
         (ax_heatmap, "A"),
         (ax_response, "B"),
         (ax_theory, "C"),
-        (ax_error, "D"),
 ]:
     ax.text(
         -0.15,
