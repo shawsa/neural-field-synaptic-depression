@@ -59,7 +59,8 @@ params = Parameters(mu=1.0, alpha=20.0, gamma=0.2)
 theta = 0.1
 
 space = SpaceDomain(-100, 200, 10**4)
-time = TimeDomain_Start_Stop_MaxSpacing(0, 18, 1e-3 / 5)
+# time = TimeDomain_Start_Stop_MaxSpacing(0, 18, 1e-3 / 5)
+time = TimeDomain_Start_Stop_MaxSpacing(0, 5, 1e-3 / 5)
 
 initial_offset = 0
 u0 = np.empty((2, space.num_points))
@@ -133,13 +134,16 @@ ax_heatmap.plot(
     label="predicted",
 )
 
-ax_heatmap.text(3, 30, "measured", rotation=40, color="b")
-ax_heatmap.text(5, 10, "predicted", rotation=40, color="g")
+ax_heatmap.plot([.2, .4], [28]*2, "b-", linewidth=3)
+ax_heatmap.text(.6, 27, "measured")
+ax_heatmap.plot([.2, .4], [25]*2, "g-", linewidth=3)
+ax_heatmap.text(.6, 24, "predicted")
 
 plt.colorbar(heatmap, ax=ax_heatmap, label="$u$")
 ax_heatmap.set_ylabel("$x$")
 ax_heatmap.set_xlabel("$t$")
-ax_heatmap.set_title(f"$I(x,t) = {epsilon} \\delta(t - {delta_time})$")
+ax_heatmap.set_ylim(0, 30)
+# ax_heatmap.set_title(f"$I(x,t) = {epsilon} \\delta(t - {delta_time})$")
 # ax_heatmap.legend()
 
 # wave response panel
@@ -158,11 +162,16 @@ ax_response.set_xlabel("$\\varepsilon$")
 ax_response.set_ylabel("$\\nu_\\infty$")
 ax_response.set_xticks([-0.08, 0, 0.08])
 ax_response.set_yticks([-4, 0, 4, 8])
-ax_response.set_title("Front response to global stimulus")
-ax_response.legend(loc="upper left")
+# ax_response.set_title("Front response to global stimulus")
+# ax_response.legend(loc="upper left")
+ax_response.plot(-.07, 7, "g.")
+ax_response.text(-.06, 6.5, "Simulation")
+ax_response.plot([-.075, -.07], [5]*2, "k-")
+ax_response.text(-.06, 4.5, "Theory")
 
 
-# error panel
+
+# error panel - REMOVED
 
 with open(ERROR_FILE_NAME, "rb") as f:
     data_list = pickle.load(f)
@@ -206,7 +215,7 @@ heatmap = ax_theory.pcolormesh(
 plt.colorbar(heatmap, ax=ax_theory, label="slope")
 ax_theory.set_xlabel("$\\tau_q$")
 ax_theory.set_ylabel("$\\gamma$")
-ax_theory.set_title("Wave response slope")
+# ax_theory.set_title("Wave response slope")
 
 
 # subplot labels

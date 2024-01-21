@@ -34,8 +34,8 @@ FILE_NAME = "figure3_error.pickle"
 
 mu = 1.0
 theta = 0.1
-alphas = np.linspace(5.0, 20.0, 5)
-gammas = np.arange(0.11, 0.31, 0.1)
+alphas = np.linspace(5.0, 20.0, 10)
+gammas = np.linspace(0.11, 0.3, 10)
 delta_epsilon = 0.01
 
 space = BufferedSpaceDomain(-100, 200, 10**4, 0.2)
