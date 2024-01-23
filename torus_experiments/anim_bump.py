@@ -27,15 +27,15 @@ from neural_field_synaptic_depression.time_integrator_tqdm import TqdmWrapper
 
 FILE_NAME = os.path.join(experiment_defaults.media_path, "bump.gif")
 
-param = Parameters(mu=1.0, alpha=20.0, gamma=0.5)
-linspace_params = (-15, 15, 201)
+params = Parameters(mu=1.0, alpha=20.0, gamma=0.5)
+linspace_params = (-15, 15, 200)
 time = TimeDomain_Start_Stop_MaxSpacing(0, 300, 1e-2)
 
 space = SpaceDomain2D(*linspace_params, *linspace_params)
 
 u0 = np.ones((2, *space.X.shape))
 u0[0] = space.dist(0, 0) < 1
-u0[1] += (space.dist(0, 0) < 1) * space.X/2
+u0[1] += (space.dist(0, 0) < 1) * space.X / 2
 
 
 def firing_rate(u, theta=0.2):
@@ -107,12 +107,14 @@ efficacy_color = ax_efficacy.pcolormesh(
 plt.colorbar(efficacy_color)
 ax_efficacy.set_title("Efficacy")
 
-peak, = ax_activity.plot(*get_peak(u0[0]), "k.")
+(peak,) = ax_activity.plot([0], [0], "k.")
 
 steps_per_frame = 100
 
 with imageio.get_writer(FILE_NAME, mode="I") as writer:
-    for u in islice(solver.solution_generator(u0, rhs, time), None, None, steps_per_frame):
+    for u in islice(
+        solver.solution_generator(u0, rhs, time), None, None, steps_per_frame
+    ):
         activity_color.set_array(u[0].ravel())
         efficacy_color.set_array(u[1].ravel())
         peak.set_data(*get_peak(u[0]))
