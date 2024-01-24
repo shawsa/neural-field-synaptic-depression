@@ -40,7 +40,7 @@ def get_initial_condition(space: SpaceDomain2D):
                   ])
     u0[0][mask] = u_spline(space.X[mask], space.Y[mask], grid=False)
     u0[1][mask] = q_spline(space.X[mask], space.Y[mask], grid=False)
-    u0[0][~mask] = 0
+    u0[0][~mask] = u0_data[0][0, 0]
     u0[1][~mask] = 1
     return u0
 

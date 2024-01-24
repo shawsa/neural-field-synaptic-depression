@@ -27,6 +27,13 @@ from neural_field_synaptic_depression.time_integrator_tqdm import TqdmWrapper
 
 from bump_init import params, firing_rate, weight_kernel, get_initial_condition
 
+plt.rcParams.update(
+    {
+        "font.size": 12,
+        "text.usetex": True,
+    }
+)
+
 
 def gaussian(x, y):
     return np.exp(-space.dist(x, y) ** 2) / (2 * np.pi)
@@ -118,51 +125,56 @@ u_f2 = solver.t_final(u_f1, rhs, time2)
 # Make Figure
 
 cmap = "seismic"
-norm = Normalize(vmin=-2, vmax=2)
+norm = Normalize(vmin=-1, vmax=1)
 efficacy_variance = 0.5
 efficacy_norm = Normalize(vmin=(1 - efficacy_variance), vmax=(1 + efficacy_variance))
 
 figsize = (7, 2.5)
 fig = plt.figure(figsize=figsize)
-grid = GridSpec(2, 3)
+grid = GridSpec(2, 13)
 
 time_x, time_y = -5, 5
 
 # entrainment panel 1
-ax_e1 = fig.add_subplot(grid[0, 0])
+ax_e1 = fig.add_subplot(grid[0, :4])
 ax_e1.pcolormesh(space.X, space.Y, u_e0[0], cmap=cmap, norm=norm)
 ax_e1.plot(*stim_path(time1.start), "g*")
 ax_e1.text(time_x, time_y, f"time={time1.start}")
 
 # entrainment panel 2
-ax_e2 = fig.add_subplot(grid[0, 1])
+ax_e2 = fig.add_subplot(grid[0, 4:8], sharey=ax_e1)
 ax_e2.pcolormesh(space.X, space.Y, u_e1[0], cmap=cmap, norm=norm)
 ax_e2.plot(*stim_path(time2.start), "g*")
 ax_e2.text(time_x, time_y, f"time={time2.start}")
 
 # entrainment panel 3
-ax_e3 = fig.add_subplot(grid[0, 2])
+ax_e3 = fig.add_subplot(grid[0, 8:12], sharey=ax_e1)
 ax_e3.pcolormesh(space.X, space.Y, u_e2[0], cmap=cmap, norm=norm)
 ax_e3.plot(*stim_path(time2.array[-1]), "g*")
 ax_e3.text(time_x, time_y, f"time={time2.array[-1]}")
 
 # failure panel 1
-ax_f1 = fig.add_subplot(grid[1, 0])
+ax_f1 = fig.add_subplot(grid[1, :4], sharex=ax_e1)
 ax_f1.pcolormesh(space.X, space.Y, u_f0[0], cmap=cmap, norm=norm)
 ax_f1.plot(*stim_path(time1.start), "g*")
 ax_f1.text(time_x, time_y, f"time={time1.start}")
 
 # failure panel 2
-ax_f2 = fig.add_subplot(grid[1, 1])
+ax_f2 = fig.add_subplot(grid[1, 4:8], sharey=ax_f1, sharex=ax_e2)
 ax_f2.pcolormesh(space.X, space.Y, u_f1[0], cmap=cmap, norm=norm)
 ax_f2.plot(*stim_path(time2.start), "g*")
 ax_f2.text(time_x, time_y, f"time={time2.start}")
 
 # failure panel 3
-ax_f3 = fig.add_subplot(grid[1, 2])
-ax_f3.pcolormesh(space.X, space.Y, u_f2[0], cmap=cmap, norm=norm)
+ax_f3 = fig.add_subplot(grid[1, 8:12], sharey=ax_f1, sharex=ax_e3)
+color_mesh = ax_f3.pcolormesh(space.X, space.Y, u_f2[0], cmap=cmap, norm=norm)
 ax_f3.plot(*stim_path(time2.array[-1]), "g*")
 ax_f3.text(time_x, time_y, f"time={time2.array[-1]}")
+
+# colorbar
+ax_color = fig.add_subplot(grid[0, 12])
+ax_color.set_ylabel("$u$")
+plt.colorbar(color_mesh, cax=ax_color, label="$u$")
 
 for ax in (ax_e1, ax_e2, ax_e3, ax_f1, ax_f2, ax_f3):
     ax.plot([-1000, 1000], [0, 0], "k:")
