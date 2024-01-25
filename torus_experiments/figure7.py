@@ -57,7 +57,8 @@ time2 = TimeDomain_Start_Stop_MaxSpacing(300, 600, 1e-2)
 
 bump_speed = 0.0705
 stim_speed_delta = 0.01
-stim_mag = None
+stim_mag1 = .3
+stim_mag2 = .2
 stim_angle = np.pi/12
 
 t_intercept = 300
@@ -107,7 +108,7 @@ def get_peak(arr):
 
 
 # successful entrainment
-stim_mag = .3
+stim_mag = stim_mag1
 solver = TqdmWrapper(Euler())
 
 u_e0 = solver.t_final(u0, rhs, time0)
@@ -115,7 +116,7 @@ u_e1 = solver.t_final(u_e0, rhs, time1)
 u_e2 = solver.t_final(u_e1, rhs, time2)
 
 # failed entrainment
-stim_mag = .2
+stim_mag = stim_mag2
 solver = TqdmWrapper(Euler())
 
 u_f0 = solver.t_final(u0, rhs, time0)
@@ -129,69 +130,73 @@ norm = Normalize(vmin=-1, vmax=1)
 efficacy_variance = 0.5
 efficacy_norm = Normalize(vmin=(1 - efficacy_variance), vmax=(1 + efficacy_variance))
 
-figsize = (7, 2.5)
+figsize = (7, 4)
 fig = plt.figure(figsize=figsize)
-grid = GridSpec(2, 13)
+grid = GridSpec(2, 11)
 
-time_x, time_y = -5, 5
+time_x, time_y = -5, 10
 
 # entrainment panel 1
-ax_e1 = fig.add_subplot(grid[0, :4])
+ax_e1 = fig.add_subplot(grid[0, :5])
 ax_e1.pcolormesh(space.X, space.Y, u_e0[0], cmap=cmap, norm=norm)
 ax_e1.plot(*stim_path(time1.start), "g*")
 ax_e1.text(time_x, time_y, f"time={time1.start}")
+ax_e1.set_title(f"$\\varepsilon = {stim_mag1}$")
 
 # entrainment panel 2
-ax_e2 = fig.add_subplot(grid[0, 4:8], sharey=ax_e1)
+ax_e2 = fig.add_subplot(grid[0, 5:10], sharey=ax_e1)
 ax_e2.pcolormesh(space.X, space.Y, u_e1[0], cmap=cmap, norm=norm)
 ax_e2.plot(*stim_path(time2.start), "g*")
 ax_e2.text(time_x, time_y, f"time={time2.start}")
+ax_e2.set_title(f"$\\varepsilon = {stim_mag1}$")
 
 # entrainment panel 3
-ax_e3 = fig.add_subplot(grid[0, 8:12], sharey=ax_e1)
+ax_e3 = fig.add_subplot(grid[1, :5], sharex=ax_e1)
 ax_e3.pcolormesh(space.X, space.Y, u_e2[0], cmap=cmap, norm=norm)
 ax_e3.plot(*stim_path(time2.array[-1]), "g*")
 ax_e3.text(time_x, time_y, f"time={time2.array[-1]}")
+ax_e3.set_title(f"$\\varepsilon = {stim_mag1}$")
 
-# failure panel 1
-ax_f1 = fig.add_subplot(grid[1, :4], sharex=ax_e1)
-ax_f1.pcolormesh(space.X, space.Y, u_f0[0], cmap=cmap, norm=norm)
-ax_f1.plot(*stim_path(time1.start), "g*")
-ax_f1.text(time_x, time_y, f"time={time1.start}")
-
-# failure panel 2
-ax_f2 = fig.add_subplot(grid[1, 4:8], sharey=ax_f1, sharex=ax_e2)
-ax_f2.pcolormesh(space.X, space.Y, u_f1[0], cmap=cmap, norm=norm)
-ax_f2.plot(*stim_path(time2.start), "g*")
-ax_f2.text(time_x, time_y, f"time={time2.start}")
+# # failure panel 1
+# ax_f1 = fig.add_subplot(grid[1, :4], sharex=ax_e1)
+# ax_f1.pcolormesh(space.X, space.Y, u_f0[0], cmap=cmap, norm=norm)
+# ax_f1.plot(*stim_path(time1.start), "g*")
+# ax_f1.text(time_x, time_y, f"time={time1.start}")
+# 
+# # failure panel 2
+# ax_f2 = fig.add_subplot(grid[1, 4:8], sharey=ax_f1, sharex=ax_e2)
+# ax_f2.pcolormesh(space.X, space.Y, u_f1[0], cmap=cmap, norm=norm)
+# ax_f2.plot(*stim_path(time2.start), "g*")
+# ax_f2.text(time_x, time_y, f"time={time2.start}")
 
 # failure panel 3
-ax_f3 = fig.add_subplot(grid[1, 8:12], sharey=ax_f1, sharex=ax_e3)
+ax_f3 = fig.add_subplot(grid[1, 5:10], sharex=ax_e2)
 color_mesh = ax_f3.pcolormesh(space.X, space.Y, u_f2[0], cmap=cmap, norm=norm)
 ax_f3.plot(*stim_path(time2.array[-1]), "g*")
 ax_f3.text(time_x, time_y, f"time={time2.array[-1]}")
+ax_f3.set_title(f"$\\varepsilon = {stim_mag2}$")
 
 # colorbar
-ax_color = fig.add_subplot(grid[0, 12])
+ax_color = fig.add_subplot(grid[0, 10])
 ax_color.set_ylabel("$u$")
 plt.colorbar(color_mesh, cax=ax_color, label="$u$")
 
-for ax in (ax_e1, ax_e2, ax_e3, ax_f1, ax_f2, ax_f3):
+for ax in (ax_e1, ax_e2, ax_e3, ax_f3):
     ax.plot([-1000, 1000], [0, 0], "k:")
     ax.plot(*list(zip(*map(stim_path, [-1000, 1000]))), "g:")
     ax.set_xlim(-10, 50)
     ax.set_ylim(-10, 15)
 
-for ax in (ax_e1, ax_e2, ax_e3):
+for ax in (ax_e1, ax_e2):
     ax.set_xticks([])
 
-for ax in (ax_f1, ax_f2, ax_f3):
+for ax in (ax_e3, ax_f3):
     ax.set_xlabel("$x$")
 
-for ax in (ax_e2, ax_e3, ax_f2, ax_f3):
+for ax in (ax_e3, ax_f3):
     ax.set_yticks([])
 
-for ax in (ax_e1, ax_f1):
+for ax in (ax_e1, ax_e3):
     ax.set_ylabel("$y$")
 
 subplot_label_font = {
@@ -202,9 +207,7 @@ for ax, label in [
         (ax_e1, "A"),
         (ax_e2, "B"),
         (ax_e3, "C"),
-        (ax_f1, "D"),
-        (ax_f2, "E"),
-        (ax_f3, "F"),
+        (ax_f3, "D"),
 ]:
     ax.text(
         0.15,
