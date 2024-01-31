@@ -351,5 +351,5 @@ ax_regressive.text(20, 0.75, r"$Q(\xi)$")
 
 grid.tight_layout(fig, w_pad=0, h_pad=0.05)
 
-for ext in [".png", ".pdf"]:
+for ext in [".png", ".pdf", ".eps"]:
     plt.savefig(os.path.join(experiment_defaults.media_path, FILE_NAME + ext))
