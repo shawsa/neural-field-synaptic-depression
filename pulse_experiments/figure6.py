@@ -240,5 +240,5 @@ for ax, label in [(ax_success, "A"), (ax_failure, "B"), (ax_contour, "C")]:
 
 plt.tight_layout()
 plt.savefig(HI_RES_FIG_FILE, dpi=300)
-for ext in [".png", ".pdf"]:
+for ext in [".png", ".pdf", ".eps"]:
     plt.savefig(FIG_FILE + ext)

@@ -6,7 +6,6 @@ import numpy as np
 import os.path
 import pickle
 
-from pqdm.processes import pqdm
 from tqdm import tqdm
 
 from collections import deque

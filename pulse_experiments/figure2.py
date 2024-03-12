@@ -421,11 +421,11 @@ plt.colorbar(
     cax=ax_gamma_colorbar,
     orientation="horizontal",
 )
-ax_gamma_colorbar.set_xticks([.10, .2], [.10, .2])
+ax_gamma_colorbar.set_xticks([0.10, 0.2], [0.10, 0.2])
 ax_gamma_colorbar.text(0.5, -0.7, r"$\gamma$", transform=ax_gamma_colorbar.transAxes)
 
 # grid.tight_layout(fig, w_pad=0.5, h_pad=-0.5)
 
 plt.savefig(HI_RES_IMAGE_FILE, dpi=300)
-for ext in [".pdf", ".png"]:
+for ext in [".pdf", ".png", ".eps"]:
     plt.savefig(IMAGE_FILE + ext)

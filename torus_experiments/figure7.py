@@ -219,5 +219,5 @@ for ax, label in [
 
 grid.tight_layout(fig)
 
-for ext in [".pdf", ".png"]:
+for ext in [".pdf", ".png", ".eps"]:
     plt.savefig(IMAGE_FILE + ext)

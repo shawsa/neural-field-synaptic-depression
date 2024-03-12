@@ -47,6 +47,12 @@ plt.rcParams.update(
     }
 )
 
+# backwards compatability?
+import neural_field_synaptic_depression.neural_field as neural_field
+import sys
+
+sys.modules["neural_field"] = neural_field
+
 FIG_FILE = os.path.join(experiment_defaults.media_path, "figure4")
 
 DATA_FILE_NAME = "spatially_localized.pickle"
@@ -143,5 +149,5 @@ for ax, label in [(ax_activity, "A"), (ax_synapse, "B")]:
     )
 
 plt.tight_layout()
-for ext in [".pdf", ".png"]:
+for ext in [".pdf", ".png", ".eps"]:
     plt.savefig(os.path.join(experiment_defaults.media_path, FIG_FILE + ext))
